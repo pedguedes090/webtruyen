@@ -157,10 +157,38 @@ export const getComicBySlug = (slug) => {
   return db.prepare('SELECT * FROM comics WHERE slug = ?').get(slug);
 };
 
-export const getTopComics = (limit = 10) => {
+export const getTopComics = (limit = 10, offset = 0) => {
   return db.prepare(`
-    SELECT * FROM comics ORDER BY views DESC LIMIT ?
-  `).all(limit);
+    SELECT * FROM comics ORDER BY views DESC LIMIT ? OFFSET ?
+  `).all(limit, offset);
+};
+
+// Count total comics (for pagination)
+export const getTotalComicsCount = (search = '') => {
+  if (search) {
+    return db.prepare(`
+      SELECT COUNT(*) as count FROM comics 
+      WHERE title LIKE ? OR author LIKE ?
+    `).get(`%${search}%`, `%${search}%`).count;
+  }
+  return db.prepare('SELECT COUNT(*) as count FROM comics').get().count;
+};
+
+// Count comics with chapters (for recent pagination)
+export const getRecentComicsCount = () => {
+  return db.prepare(`
+    SELECT COUNT(DISTINCT c.id) as count
+    FROM comics c
+    INNER JOIN chapters ch ON ch.comic_id = c.id
+  `).get().count;
+};
+
+// Count comics by genre
+export const getComicsByGenreCount = (genre) => {
+  return db.prepare(`
+    SELECT COUNT(*) as count FROM comics 
+    WHERE genres LIKE ?
+  `).get(`%"${genre}"%`).count;
 };
 
 // Get random featured comics from top views

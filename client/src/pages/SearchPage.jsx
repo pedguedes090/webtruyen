@@ -16,9 +16,12 @@ function SearchPage() {
     const [genres, setGenres] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchValue, setSearchValue] = useState(query);
-    const [hasMore, setHasMore] = useState(true);
-    const [totalLoaded, setTotalLoaded] = useState(0);
+    const [totalCount, setTotalCount] = useState(0);
     const LIMIT = 24;
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalCount / LIMIT);
+    const hasMore = page < totalPages;
 
     useEffect(() => {
         async function fetchComics() {
@@ -26,21 +29,25 @@ function SearchPage() {
             const offset = (page - 1) * LIMIT;
 
             try {
-                let data = [];
+                let response;
 
                 if (genre) {
-                    data = await getComicsByGenre(genre, LIMIT, offset);
+                    response = await getComicsByGenre(genre, LIMIT, offset);
+                    setComics(response.data);
+                    setTotalCount(response.total);
                 } else if (sort === 'hot') {
-                    data = await getTopComics(LIMIT);
+                    response = await getTopComics(LIMIT, offset);
+                    setComics(response.data);
+                    setTotalCount(response.total);
                 } else if (sort === 'recent') {
-                    data = await getRecentComics(LIMIT, offset);
+                    response = await getRecentComics(LIMIT, offset);
+                    setComics(response.data);
+                    setTotalCount(response.total);
                 } else {
-                    data = await getComics(LIMIT, offset, query);
+                    response = await getComics(LIMIT, offset, query);
+                    setComics(response.data);
+                    setTotalCount(response.total);
                 }
-
-                setComics(data);
-                setHasMore(data.length >= LIMIT);
-                setTotalLoaded(offset + data.length);
             } catch (error) {
                 console.error('Error searching comics:', error);
             } finally {
@@ -103,28 +110,24 @@ function SearchPage() {
     // Generate page numbers to display
     function getPageNumbers() {
         const pages = [];
-        const maxPages = 5; // Show max 5 page buttons
+        const maxVisible = 5;
 
-        let start = Math.max(1, page - 2);
-        let end = start + maxPages - 1;
+        let start = Math.max(1, page - Math.floor(maxVisible / 2));
+        let end = Math.min(totalPages, start + maxVisible - 1);
 
-        // Adjust if we're near the end
-        if (!hasMore && page === end) {
-            // Current is last page
-        } else if (hasMore) {
-            end = Math.max(end, page + 1);
+        // Adjust start if we're near the end
+        if (end - start + 1 < maxVisible) {
+            start = Math.max(1, end - maxVisible + 1);
         }
 
         for (let i = start; i <= end; i++) {
-            if (i === page || i < page || (i === page + 1 && hasMore)) {
-                pages.push(i);
-            }
+            pages.push(i);
         }
 
         return pages;
     }
 
-    const showPagination = sort !== 'hot'; // HOT doesn't have pagination
+    const showPagination = totalPages > 1;
 
     return (
         <main className="max-w-7xl mx-auto px-4 py-6">
@@ -246,15 +249,26 @@ function SearchPage() {
                                         key={p}
                                         onClick={() => goToPage(p)}
                                         className={`w-10 h-10 flex items-center justify-center rounded text-sm transition-colors ${p === page
-                                                ? 'bg-primary text-white'
-                                                : 'bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border'
+                                            ? 'bg-primary text-white'
+                                            : 'bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border'
                                             }`}
                                     >
                                         {p}
                                     </button>
                                 ))}
 
-                                {hasMore && <span className="px-2 text-gray-400">...</span>}
+                                {/* Last page indicator */}
+                                {totalPages > 0 && getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+                                    <>
+                                        <span className="px-2 text-gray-400">...</span>
+                                        <button
+                                            onClick={() => goToPage(totalPages)}
+                                            className="w-10 h-10 flex items-center justify-center rounded bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border transition-colors text-sm"
+                                        >
+                                            {totalPages}
+                                        </button>
+                                    </>
+                                )}
 
                                 {/* Next button */}
                                 <button

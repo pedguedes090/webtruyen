@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import helmet from 'helmet';
 import * as db from './database.js';
-import { invalidateGenreCache } from './database.js';
+import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount } from './database.js';
 import rateLimit from 'express-rate-limit';
 import { blockBots, validateApiParams, sanitizeHuggingFaceUrl } from './middleware/security.js';
 
@@ -291,10 +291,14 @@ app.get('/api/genres/:genre/comics', (req, res) => {
     try {
         const { limit = 20, offset = 0 } = req.query;
         const comics = db.getComicsByGenre(req.params.genre, parseInt(limit), parseInt(offset));
-        res.json(comics.map(c => ({
-            ...c,
-            genres: JSON.parse(c.genres || '[]')
-        })));
+        const total = getComicsByGenreCount(req.params.genre);
+        res.json({
+            data: comics.map(c => ({
+                ...c,
+                genres: JSON.parse(c.genres || '[]')
+            })),
+            total
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -307,10 +311,14 @@ app.get('/api/comics', (req, res) => {
     try {
         const { limit = 20, offset = 0, search = '' } = req.query;
         const comics = db.getAllComics(parseInt(limit), parseInt(offset), search);
-        res.json(comics.map(c => ({
-            ...c,
-            genres: JSON.parse(c.genres || '[]')
-        })));
+        const total = getTotalComicsCount(search);
+        res.json({
+            data: comics.map(c => ({
+                ...c,
+                genres: JSON.parse(c.genres || '[]')
+            })),
+            total
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -319,12 +327,16 @@ app.get('/api/comics', (req, res) => {
 // Get top/trending comics
 app.get('/api/comics/top', (req, res) => {
     try {
-        const { limit = 10 } = req.query;
-        const comics = db.getTopComics(parseInt(limit));
-        res.json(comics.map(c => ({
-            ...c,
-            genres: JSON.parse(c.genres || '[]')
-        })));
+        const { limit = 10, offset = 0 } = req.query;
+        const comics = db.getTopComics(parseInt(limit), parseInt(offset));
+        const total = getTotalComicsCount();
+        res.json({
+            data: comics.map(c => ({
+                ...c,
+                genres: JSON.parse(c.genres || '[]')
+            })),
+            total
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -349,10 +361,14 @@ app.get('/api/comics/recent', (req, res) => {
     try {
         const { limit = 12, offset = 0 } = req.query;
         const comics = db.getRecentComics(parseInt(limit), parseInt(offset));
-        res.json(comics.map(c => ({
-            ...c,
-            genres: JSON.parse(c.genres || '[]')
-        })));
+        const total = getRecentComicsCount();
+        res.json({
+            data: comics.map(c => ({
+                ...c,
+                genres: JSON.parse(c.genres || '[]')
+            })),
+            total
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

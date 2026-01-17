@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ComicCard, ComicCardWithChapters } from '../components/ComicCard';
 import RankingList from '../components/RankingList';
-import { getRecentComics, getTopComics, getFeaturedComics, resolveImageUrl } from '../api';
+import { getRecentComics, getTopComics, getFeaturedComics, resolveImageUrl, prefetchRecentComics } from '../api';
 import { FireOutlined, SyncOutlined, HistoryOutlined, TrophyOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { PLACEHOLDER_SMALL } from '../constants/placeholders';
 
@@ -16,23 +16,48 @@ function HomePage() {
     const [topComics, setTopComics] = useState([]);
     const [readingHistory, setReadingHistory] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [hasMore, setHasMore] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
     const LIMIT = 12;
+
+    // Cache for static data (featured, top comics)
+    const staticDataRef = useRef({ featured: null, top: null });
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalCount / LIMIT);
+    const hasMore = page < totalPages;
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             const offset = (page - 1) * LIMIT;
             try {
-                const [featured, recent, top] = await Promise.all([
-                    getFeaturedComics(10, 30),
-                    getRecentComics(LIMIT, offset),
-                    getTopComics(10)
-                ]);
-                setFeaturedComics(featured);
-                setRecentComics(recent);
-                setTopComics(top);
-                setHasMore(recent.length >= LIMIT);
+                // Only fetch recent comics for page > 1 (featured and top are cached)
+                if (page === 1 || !staticDataRef.current.featured) {
+                    const [featured, recentResponse, topResponse] = await Promise.all([
+                        getFeaturedComics(10, 30),
+                        getRecentComics(LIMIT, offset),
+                        getTopComics(10)
+                    ]);
+                    staticDataRef.current.featured = featured;
+                    staticDataRef.current.top = topResponse.data;
+                    setFeaturedComics(featured);
+                    setRecentComics(recentResponse.data);
+                    setTopComics(topResponse.data);
+                    setTotalCount(recentResponse.total);
+                } else {
+                    // Only fetch recent comics for subsequent pages
+                    const recentResponse = await getRecentComics(LIMIT, offset);
+                    setRecentComics(recentResponse.data);
+                    setTotalCount(recentResponse.total);
+                    // Use cached data
+                    setFeaturedComics(staticDataRef.current.featured);
+                    setTopComics(staticDataRef.current.top);
+                }
+
+                // Prefetch next page
+                if (hasMore || page === 1) {
+                    prefetchRecentComics(LIMIT, page * LIMIT);
+                }
             } catch (error) {
                 console.error('Error fetching comics:', error);
             } finally {
@@ -64,8 +89,15 @@ function HomePage() {
     // Generate page numbers to display
     function getPageNumbers() {
         const pages = [];
-        let start = Math.max(1, page - 2);
-        let end = Math.min(start + 4, hasMore ? page + 1 : page);
+        const maxVisible = 5;
+
+        let start = Math.max(1, page - Math.floor(maxVisible / 2));
+        let end = Math.min(totalPages, start + maxVisible - 1);
+
+        // Adjust start if we're near the end
+        if (end - start + 1 < maxVisible) {
+            start = Math.max(1, end - maxVisible + 1);
+        }
 
         for (let i = start; i <= end; i++) {
             pages.push(i);
@@ -122,8 +154,8 @@ function HomePage() {
                             <button
                                 onClick={async () => {
                                     const offset = (page - 1) * LIMIT;
-                                    const recent = await getRecentComics(LIMIT, offset);
-                                    setRecentComics(recent);
+                                    const recentResponse = await getRecentComics(LIMIT, offset);
+                                    setRecentComics(recentResponse.data);
                                 }}
                                 className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center hover:bg-primary-hover transition-colors"
                             >
@@ -172,15 +204,26 @@ function HomePage() {
                                             key={p}
                                             onClick={() => goToPage(p)}
                                             className={`w-10 h-10 flex items-center justify-center rounded text-sm transition-colors ${p === page
-                                                    ? 'bg-primary text-white'
-                                                    : 'bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border'
+                                                ? 'bg-primary text-white'
+                                                : 'bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border'
                                                 }`}
                                         >
                                             {p}
                                         </button>
                                     ))}
 
-                                    {hasMore && <span className="px-2 text-gray-400">...</span>}
+                                    {/* Last page indicator */}
+                                    {totalPages > 0 && getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+                                        <>
+                                            <span className="px-2 text-gray-400">...</span>
+                                            <button
+                                                onClick={() => goToPage(totalPages)}
+                                                className="w-10 h-10 flex items-center justify-center rounded bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border transition-colors text-sm"
+                                            >
+                                                {totalPages}
+                                            </button>
+                                        </>
+                                    )}
 
                                     {/* Next button */}
                                     <button

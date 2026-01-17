@@ -62,17 +62,26 @@ export const getComics = async (limit = 20, offset = 0, search = '', sort = '') 
     if (search) params.append('search', search);
     if (sort) params.append('sort', sort);
     const response = await axios.get(`${API_BASE}/comics?${params}`);
+    // Returns { data: [...], total: number }
     return response.data;
 };
 
-export const getTopComics = async (limit = 10) => {
-    const response = await axios.get(`${API_BASE}/comics/top?limit=${limit}`);
+export const getTopComics = async (limit = 10, offset = 0) => {
+    const response = await axios.get(`${API_BASE}/comics/top?limit=${limit}&offset=${offset}`);
+    // Returns { data: [...], total: number }
     return response.data;
 };
 
 export const getRecentComics = async (limit = 12, offset = 0) => {
     const response = await axios.get(`${API_BASE}/comics/recent?limit=${limit}&offset=${offset}`);
+    // Returns { data: [...], total: number }
     return response.data;
+};
+
+// Prefetch next page (for performance)
+export const prefetchRecentComics = (limit, offset) => {
+    // Fire and forget - cache the response
+    axios.get(`${API_BASE}/comics/recent?limit=${limit}&offset=${offset}`).catch(() => { });
 };
 
 // Get featured comics (random from top views)
@@ -117,6 +126,7 @@ export const getGenres = async () => {
 
 export const getComicsByGenre = async (genre, limit = 20, offset = 0) => {
     const response = await axios.get(`${API_BASE}/genres/${encodeURIComponent(genre)}/comics?limit=${limit}&offset=${offset}`);
+    // Returns { data: [...], total: number }
     return response.data;
 };
 
