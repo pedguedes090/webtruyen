@@ -210,7 +210,7 @@ app.post('/upload/chapter', adminAuth, upload.array('images', 500), async (req, 
     }
 });
 
-// Serve static images
+// Serve static images with CORS headers
 app.use('/images', express.static(UPLOAD_DIR, {
     maxAge: '30d',
     etag: true,
@@ -218,6 +218,10 @@ app.use('/images', express.static(UPLOAD_DIR, {
     setHeaders: (res, filePath) => {
         // Set cache headers for images
         res.setHeader('Cache-Control', 'public, max-age=2592000'); // 30 days
+        // CORS headers for cross-origin image access
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     }
 }));
 
