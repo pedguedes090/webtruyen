@@ -3,44 +3,44 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ComicCard } from '../components/ComicCard';
 import { getComics, getTopComics, getRecentComics, getComicsByGenre, getGenres } from '../api';
-import { SearchOutlined, FireOutlined, ClockCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { SearchOutlined, FireOutlined, ClockCircleOutlined, CloseCircleOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 function SearchPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
     const sort = searchParams.get('sort') || '';
     const genre = searchParams.get('genre') || '';
+    const page = parseInt(searchParams.get('page') || '1');
 
     const [comics, setComics] = useState([]);
     const [genres, setGenres] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
     const [searchValue, setSearchValue] = useState(query);
-    const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [totalLoaded, setTotalLoaded] = useState(0);
     const LIMIT = 24;
 
     useEffect(() => {
         async function fetchComics() {
             setLoading(true);
-            setOffset(0);
-            setHasMore(true);
+            const offset = (page - 1) * LIMIT;
 
             try {
                 let data = [];
 
                 if (genre) {
-                    data = await getComicsByGenre(genre, LIMIT, 0);
+                    data = await getComicsByGenre(genre, LIMIT, offset);
                 } else if (sort === 'hot') {
                     data = await getTopComics(LIMIT);
                 } else if (sort === 'recent') {
-                    data = await getRecentComics(LIMIT);
+                    data = await getRecentComics(LIMIT, offset);
                 } else {
-                    data = await getComics(LIMIT, 0, query);
+                    data = await getComics(LIMIT, offset, query);
                 }
 
                 setComics(data);
                 setHasMore(data.length >= LIMIT);
+                setTotalLoaded(offset + data.length);
             } catch (error) {
                 console.error('Error searching comics:', error);
             } finally {
@@ -48,7 +48,8 @@ function SearchPage() {
             }
         }
         fetchComics();
-    }, [query, sort, genre]);
+        window.scrollTo(0, 0);
+    }, [query, sort, genre, page]);
 
     useEffect(() => {
         async function fetchGenres() {
@@ -62,29 +63,13 @@ function SearchPage() {
         fetchGenres();
     }, []);
 
-    async function loadMore() {
-        if (loadingMore || !hasMore) return;
-
-        setLoadingMore(true);
-        const newOffset = offset + LIMIT;
-
-        try {
-            let data = [];
-
-            if (genre) {
-                data = await getComicsByGenre(genre, LIMIT, newOffset);
-            } else {
-                data = await getComics(LIMIT, newOffset, query);
-            }
-
-            setComics(prev => [...prev, ...data]);
-            setOffset(newOffset);
-            setHasMore(data.length >= LIMIT);
-        } catch (error) {
-            console.error('Error loading more:', error);
-        } finally {
-            setLoadingMore(false);
-        }
+    function goToPage(newPage) {
+        const params = {};
+        if (query) params.q = query;
+        if (sort) params.sort = sort;
+        if (genre) params.genre = genre;
+        if (newPage > 1) params.page = newPage.toString();
+        setSearchParams(params);
     }
 
     function handleSearch(e) {
@@ -114,6 +99,32 @@ function SearchPage() {
         if (query) return `Kết quả: "${query}"`;
         return 'Tìm kiếm truyện';
     }
+
+    // Generate page numbers to display
+    function getPageNumbers() {
+        const pages = [];
+        const maxPages = 5; // Show max 5 page buttons
+
+        let start = Math.max(1, page - 2);
+        let end = start + maxPages - 1;
+
+        // Adjust if we're near the end
+        if (!hasMore && page === end) {
+            // Current is last page
+        } else if (hasMore) {
+            end = Math.max(end, page + 1);
+        }
+
+        for (let i = start; i <= end; i++) {
+            if (i === page || i < page || (i === page + 1 && hasMore)) {
+                pages.push(i);
+            }
+        }
+
+        return pages;
+    }
+
+    const showPagination = sort !== 'hot'; // HOT doesn't have pagination
 
     return (
         <main className="max-w-7xl mx-auto px-4 py-6">
@@ -185,10 +196,12 @@ function SearchPage() {
             {/* Results */}
             <div className="bg-white dark:bg-dark-card p-4 shadow-sm dark:shadow-none">
                 {!loading && (
-                    <p className="text-sm text-gray-400 mb-4">
-                        Tìm thấy <span className="text-primary font-medium">{comics.length}</span> truyện
-                        {hasMore && '+'}
-                    </p>
+                    <div className="flex items-center justify-between mb-4">
+                        <p className="text-sm text-gray-400">
+                            Trang <span className="text-primary font-medium">{page}</span>
+                            {hasMore && '+'} • <span className="text-primary font-medium">{comics.length}</span> truyện
+                        </p>
+                    </div>
                 )}
 
                 {loading ? (
@@ -203,14 +216,53 @@ function SearchPage() {
                             ))}
                         </div>
 
-                        {hasMore && !sort && (
-                            <div className="mt-6 text-center">
+                        {/* Pagination */}
+                        {showPagination && (
+                            <div className="mt-6 flex items-center justify-center gap-1">
+                                {/* Previous button */}
                                 <button
-                                    onClick={loadMore}
-                                    disabled={loadingMore}
-                                    className="px-6 py-2 bg-gray-200 dark:bg-dark-tertiary text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-dark-secondary transition-colors disabled:opacity-50"
+                                    onClick={() => goToPage(page - 1)}
+                                    disabled={page === 1}
+                                    className="w-10 h-10 flex items-center justify-center rounded bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    {loadingMore ? 'Đang tải...' : 'Tải thêm'}
+                                    <LeftOutlined />
+                                </button>
+
+                                {/* Page numbers */}
+                                {page > 3 && (
+                                    <>
+                                        <button
+                                            onClick={() => goToPage(1)}
+                                            className="w-10 h-10 flex items-center justify-center rounded bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border transition-colors text-sm"
+                                        >
+                                            1
+                                        </button>
+                                        {page > 4 && <span className="px-2 text-gray-400">...</span>}
+                                    </>
+                                )}
+
+                                {getPageNumbers().map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => goToPage(p)}
+                                        className={`w-10 h-10 flex items-center justify-center rounded text-sm transition-colors ${p === page
+                                                ? 'bg-primary text-white'
+                                                : 'bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border'
+                                            }`}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+
+                                {hasMore && <span className="px-2 text-gray-400">...</span>}
+
+                                {/* Next button */}
+                                <button
+                                    onClick={() => goToPage(page + 1)}
+                                    disabled={!hasMore}
+                                    className="w-10 h-10 flex items-center justify-center rounded bg-gray-100 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <RightOutlined />
                                 </button>
                             </div>
                         )}
@@ -227,4 +279,3 @@ function SearchPage() {
 }
 
 export default SearchPage;
-

@@ -347,8 +347,8 @@ app.get('/api/comics/featured', (req, res) => {
 // Get recently updated comics
 app.get('/api/comics/recent', (req, res) => {
     try {
-        const { limit = 12 } = req.query;
-        const comics = db.getRecentComics(parseInt(limit));
+        const { limit = 12, offset = 0 } = req.query;
+        const comics = db.getRecentComics(parseInt(limit), parseInt(offset));
         res.json(comics.map(c => ({
             ...c,
             genres: JSON.parse(c.genres || '[]')

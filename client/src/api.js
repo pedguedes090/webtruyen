@@ -70,8 +70,8 @@ export const getTopComics = async (limit = 10) => {
     return response.data;
 };
 
-export const getRecentComics = async (limit = 12) => {
-    const response = await axios.get(`${API_BASE}/comics/recent?limit=${limit}`);
+export const getRecentComics = async (limit = 12, offset = 0) => {
+    const response = await axios.get(`${API_BASE}/comics/recent?limit=${limit}&offset=${offset}`);
     return response.data;
 };
 

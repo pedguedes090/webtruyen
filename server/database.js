@@ -175,7 +175,7 @@ export const getFeaturedComics = (count = 10, fromTop = 30) => {
   return shuffled.slice(0, Math.min(count, shuffled.length));
 };
 
-export const getRecentComics = (limit = 12) => {
+export const getRecentComics = (limit = 12, offset = 0) => {
   // Optimized: Single query with JOIN, avoiding N+1 problem
   // Step 1: Get comics with their latest chapter date using a more efficient query
   const comics = db.prepare(`
@@ -190,8 +190,8 @@ export const getRecentComics = (limit = 12) => {
     ) ch_max ON ch_max.comic_id = c.id
     LEFT JOIN chapters ch_latest ON ch_latest.comic_id = c.id AND ch_latest.chapter_number = ch_max.max_num
     ORDER BY ch_latest.created_at DESC NULLS LAST
-    LIMIT ?
-  `).all(limit);
+    LIMIT ? OFFSET ?
+  `).all(limit, offset);
 
   if (comics.length === 0) return [];
 
