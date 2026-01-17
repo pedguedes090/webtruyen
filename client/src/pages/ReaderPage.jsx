@@ -492,12 +492,12 @@ function ReaderPage() {
                 </div>
             </div>
 
-            {/* Scroll to top */}
+            {/* Scroll to top - auto hide like top nav */}
             <AnimatePresence>
-                {showScrollTop && (
+                {showScrollTop && showNav && (
                     <motion.button
                         onClick={scrollToTop}
-                        className="fixed bottom-24 right-4 w-12 h-12 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white rounded-full shadow-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-all flex items-center justify-center z-40 text-lg"
+                        className="fixed bottom-24 right-4 w-12 h-12 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white rounded-full shadow-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center justify-center z-40 text-lg"
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
