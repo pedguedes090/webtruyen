@@ -210,6 +210,14 @@ app.post('/upload/chapter', adminAuth, upload.array('images', 500), async (req, 
     }
 });
 
+// Handle CORS preflight for images
+app.options('/images/*', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.sendStatus(200);
+});
+
 // Serve static images with CORS headers
 app.use('/images', express.static(UPLOAD_DIR, {
     maxAge: '30d',
