@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ComicCard, ComicCardWithChapters } from '../components/ComicCard';
 import RankingList from '../components/RankingList';
-import { getRecentComics, getTopComics, getComics } from '../api';
+import { getRecentComics, getTopComics, getFeaturedComics } from '../api';
 import { FireOutlined, SyncOutlined, HistoryOutlined, TrophyOutlined } from '@ant-design/icons';
 import { PLACEHOLDER_SMALL } from '../constants/placeholders';
 
@@ -18,7 +18,7 @@ function HomePage() {
         const fetchData = async () => {
             try {
                 const [featured, recent, top] = await Promise.all([
-                    getComics(6, 0),
+                    getFeaturedComics(10, 30),
                     getRecentComics(12),
                     getTopComics(10)
                 ]);
@@ -51,24 +51,22 @@ function HomePage() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 sm:gap-6">
                 {/* Main Content */}
                 <div className="space-y-4 sm:space-y-6">
-                    {/* Featured Comics - Horizontal Scroll */}
+                    {/* Featured Comics - Auto Scroll Carousel */}
                     <section>
                         <div className="flex items-center gap-2 mb-3">
                             <FireOutlined className="text-primary text-lg sm:text-xl" />
                             <h2 className="text-sm sm:text-base font-semibold text-primary">Truyện đề cử</h2>
                         </div>
-                        <div className="relative group">
-                            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide">
-                                {featuredComics.slice(0, 10).map((comic, index) => (
-                                    <motion.div
-                                        key={comic.id}
-                                        className="flex-shrink-0 w-24 sm:w-28"
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.05 }}
+                        <div className="relative overflow-hidden">
+                            <div className="flex gap-3 sm:gap-4 animate-marquee hover:[animation-play-state:paused]">
+                                {/* Double the comics for seamless loop */}
+                                {[...featuredComics, ...featuredComics].map((comic, index) => (
+                                    <div
+                                        key={`${comic.id}-${index}`}
+                                        className="flex-shrink-0 w-[calc((100%-24px)/3)] sm:w-[calc((100%-64px)/5)]"
                                     >
-                                        <ComicCard comic={comic} showBadge index={index} compact />
-                                    </motion.div>
+                                        <ComicCard comic={comic} showBadge index={index % featuredComics.length} />
+                                    </div>
                                 ))}
                             </div>
                         </div>

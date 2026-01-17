@@ -75,6 +75,12 @@ export const getRecentComics = async (limit = 12) => {
     return response.data;
 };
 
+// Get featured comics (random from top views)
+export const getFeaturedComics = async (count = 10, fromTop = 30) => {
+    const response = await axios.get(`${API_BASE}/comics/featured?count=${count}&fromTop=${fromTop}`);
+    return response.data;
+};
+
 export const getComic = async (id) => {
     const response = await axios.get(`${API_BASE}/comics/${id}`);
     return response.data;

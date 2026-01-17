@@ -163,6 +163,18 @@ export const getTopComics = (limit = 10) => {
   `).all(limit);
 };
 
+// Get random featured comics from top views
+export const getFeaturedComics = (count = 10, fromTop = 30) => {
+  // Get top 30 comics by views
+  const topComics = db.prepare(`
+    SELECT * FROM comics ORDER BY views DESC LIMIT ?
+  `).all(fromTop);
+
+  // Shuffle and take 'count' random comics
+  const shuffled = topComics.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+};
+
 export const getRecentComics = (limit = 12) => {
   // Optimized: Single query with JOIN, avoiding N+1 problem
   // Step 1: Get comics with their latest chapter date using a more efficient query

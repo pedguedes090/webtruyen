@@ -323,6 +323,20 @@ app.get('/api/comics/top', (req, res) => {
     }
 });
 
+// Get featured comics (random from top views)
+app.get('/api/comics/featured', (req, res) => {
+    try {
+        const { count = 10, fromTop = 30 } = req.query;
+        const comics = db.getFeaturedComics(parseInt(count), parseInt(fromTop));
+        res.json(comics.map(c => ({
+            ...c,
+            genres: JSON.parse(c.genres || '[]')
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get recently updated comics
 app.get('/api/comics/recent', (req, res) => {
     try {
