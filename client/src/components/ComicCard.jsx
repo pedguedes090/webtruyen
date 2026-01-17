@@ -7,16 +7,19 @@ import LazyImage from './LazyImage';
 
 
 // Vertical card for Featured section (no chapters)
-export function ComicCard({ comic, showBadge = false, index = 0 }) {
+export function ComicCard({ comic, showBadge = false, index = 0, compact = false }) {
+    const CardWrapper = compact ? 'div' : motion.div;
+    const wrapperProps = compact ? {} : {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.3, delay: index * 0.05 },
+        whileHover: { y: -4 }
+    };
+
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            whileHover={{ y: -4 }}
-        >
+        <CardWrapper {...wrapperProps}>
             <Link to={`/truyen/${comic.slug || slugify(comic.title)}`} className="group block">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-lg mb-2">
+                <div className={`relative overflow-hidden rounded-lg ${compact ? 'aspect-[3/4] mb-1.5' : 'aspect-[3/4] mb-2'}`}>
                     <LazyImage
                         src={resolveImageUrl(comic.cover_url) || PLACEHOLDER_COVER}
                         alt={comic.title}
@@ -24,17 +27,17 @@ export function ComicCard({ comic, showBadge = false, index = 0 }) {
                         className="w-full h-full group-hover:scale-105 transition-transform duration-500"
                     />
                     {showBadge && comic.status && (
-                        <span className="absolute top-1 left-1 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-primary to-primary-hover text-white rounded z-10">
+                        <span className={`absolute top-1 left-1 font-bold bg-gradient-to-r from-primary to-primary-hover text-white rounded z-10 ${compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'}`}>
                             {comic.status === 'ongoing' ? 'Đang ra' : 'Hoàn thành'}
                         </span>
                     )}
                 </div>
-                <h3 className="text-xs font-medium line-clamp-2 leading-tight text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors">
+                <h3 className={`font-medium line-clamp-2 leading-tight text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors ${compact ? 'text-[10px]' : 'text-xs'}`}>
                     {comic.title}
                 </h3>
-                <p className="text-[10px] text-gray-500 mt-0.5">{comic.author || 'Updating...'}</p>
+                {!compact && <p className="text-[10px] text-gray-500 mt-0.5">{comic.author || 'Updating...'}</p>}
             </Link>
-        </motion.div>
+        </CardWrapper>
     );
 }
 

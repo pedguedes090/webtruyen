@@ -100,6 +100,16 @@
     @apply bg-light-tertiary dark:bg-dark-tertiary rounded-full hover:bg-gray-400 dark:hover:bg-gray-600;
 }
 
+/* Hide scrollbar for horizontal scroll sections */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
 /* Toast animation */
 @keyframes slideIn {
     from {

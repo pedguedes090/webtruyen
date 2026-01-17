@@ -51,16 +51,26 @@ function HomePage() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 sm:gap-6">
                 {/* Main Content */}
                 <div className="space-y-4 sm:space-y-6">
-                    {/* Featured Comics */}
+                    {/* Featured Comics - Horizontal Scroll */}
                     <section>
                         <div className="flex items-center gap-2 mb-3">
                             <FireOutlined className="text-primary text-lg sm:text-xl" />
                             <h2 className="text-sm sm:text-base font-semibold text-primary">Truyện đề cử</h2>
                         </div>
-                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
-                            {featuredComics.slice(0, 6).map((comic, index) => (
-                                <ComicCard key={comic.id} comic={comic} showBadge index={index} />
-                            ))}
+                        <div className="relative group">
+                            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide">
+                                {featuredComics.slice(0, 10).map((comic, index) => (
+                                    <motion.div
+                                        key={comic.id}
+                                        className="flex-shrink-0 w-24 sm:w-28"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                    >
+                                        <ComicCard comic={comic} showBadge index={index} compact />
+                                    </motion.div>
+                                ))}
+                            </div>
                         </div>
                     </section>
 
