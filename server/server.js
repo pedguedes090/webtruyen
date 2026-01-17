@@ -81,7 +81,11 @@ app.use(helmet({
                 "https://*.huggingface.co",
                 "https://*.hf.co",           // HuggingFace CDN (xethub, cas-bridge, etc.)
                 "https://via.placeholder.com",
-                "https://serrverimg.duongkum999.me"  // Your image server
+                "https://serrverimg.duongkum999.me",  // Your image server
+                "https://*.ibyteimg.com",    // TikTok/ByteDance images
+                "https://drive.google.com",   // Google Drive
+                "https://*.googleusercontent.com",  // Google images
+                "https://*.ggpht.com",        // Google Photos thumbnails
             ],
             scriptSrc: [
                 "'self'",
@@ -92,7 +96,10 @@ app.use(helmet({
                 "'self'",
                 "https://huggingface.co",
                 "https://*.hf.co",
-                "https://serrverimg.duongkum999.me"
+                "https://serrverimg.duongkum999.me",
+                "https://*.ibyteimg.com",
+                "https://drive.google.com",
+                "https://*.googleusercontent.com",
             ],
         },
     },
