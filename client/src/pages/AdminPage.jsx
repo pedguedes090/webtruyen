@@ -85,6 +85,30 @@ function AdminPage() {
     // Refs for server file inputs map
     const serverFileInputRefs = useRef({});
 
+    // Define fetchComics first (before useEffects that use it)
+    const fetchComics = useCallback(async (page = 1, search = '') => {
+        setLoading(true);
+        try {
+            const offset = (page - 1) * COMICS_PER_PAGE;
+            const response = await getComics(COMICS_PER_PAGE, offset, search);
+            setComics(response.data);
+            setTotalComics(response.total || 0);
+        } catch (error) {
+            showToast('Lỗi tải danh sách truyện', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Handle page change
+    const handlePageChange = (newPage) => {
+        setCurrentPage(newPage);
+        fetchComics(newPage, searchQuery);
+    };
+
+    const totalPages = Math.ceil(totalComics / COMICS_PER_PAGE);
+
+    // Load comics when logged in
     useEffect(() => {
         if (isLoggedIn) fetchComics(1, '');
     }, [isLoggedIn, fetchComics]);
@@ -100,20 +124,6 @@ function AdminPage() {
         };
     }, [coverPreview]);
 
-    const fetchComics = useCallback(async (page = 1, search = '') => {
-        setLoading(true);
-        try {
-            const offset = (page - 1) * COMICS_PER_PAGE;
-            const response = await getComics(COMICS_PER_PAGE, offset, search);
-            setComics(response.data);
-            setTotalComics(response.total || 0);
-        } catch (error) {
-            showToast('Lỗi tải danh sách truyện', 'error');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     // Debounced search
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -122,14 +132,6 @@ function AdminPage() {
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery, fetchComics]);
-
-    // Handle page change
-    const handlePageChange = (newPage) => {
-        setCurrentPage(newPage);
-        fetchComics(newPage, searchQuery);
-    };
-
-    const totalPages = Math.ceil(totalComics / COMICS_PER_PAGE);
 
     const fetchChapters = async (comicId) => {
         try {
@@ -788,8 +790,8 @@ function AdminPage() {
                                                     key={page}
                                                     onClick={() => handlePageChange(page)}
                                                     className={`min-w-[28px] h-7 text-xs rounded transition-colors ${currentPage === page
-                                                            ? 'bg-primary text-white'
-                                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-tertiary'
+                                                        ? 'bg-primary text-white'
+                                                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-tertiary'
                                                         }`}
                                                 >
                                                     {page}
