@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ComicCard, ComicCardWithChapters } from '../components/ComicCard';
 import RankingList from '../components/RankingList';
-import { getRecentComics, getTopComics, getFeaturedComics } from '../api';
+import { getRecentComics, getTopComics, getFeaturedComics, resolveImageUrl } from '../api';
 import { FireOutlined, SyncOutlined, HistoryOutlined, TrophyOutlined } from '@ant-design/icons';
 import { PLACEHOLDER_SMALL } from '../constants/placeholders';
 
@@ -121,7 +121,7 @@ function HomePage() {
                                 readingHistory.map(item => (
                                     <Link key={item.comicId} to={`/truyen/${item.comicSlug}`} className="flex-shrink-0 w-14 sm:w-16">
                                         <img
-                                            src={item.coverUrl || PLACEHOLDER_SMALL}
+                                            src={resolveImageUrl(item.coverUrl) || PLACEHOLDER_SMALL}
                                             alt={item.comicTitle}
                                             className="w-14 sm:w-16 h-20 sm:h-22 rounded object-cover hover:ring-2 hover:ring-primary transition-all"
                                         />
@@ -150,7 +150,7 @@ function HomePage() {
                                 readingHistory.map(item => (
                                     <Link key={item.comicId} to={`/truyen/${item.comicSlug}`} className="flex-shrink-0 w-12">
                                         <img
-                                            src={item.coverUrl || PLACEHOLDER_SMALL}
+                                            src={resolveImageUrl(item.coverUrl) || PLACEHOLDER_SMALL}
                                             alt={item.comicTitle}
                                             className="w-12 h-16 rounded object-cover hover:ring-2 hover:ring-primary transition-all"
                                         />
