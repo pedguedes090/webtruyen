@@ -57,7 +57,7 @@ function HomePage() {
                             <FireOutlined className="text-primary text-lg sm:text-xl" />
                             <h2 className="text-sm sm:text-base font-semibold text-primary">Truyện đề cử</h2>
                         </div>
-                        <div className="relative overflow-hidden">
+                        <div className="relative overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing">
                             <div className="flex gap-3 sm:gap-4 animate-marquee hover:[animation-play-state:paused]">
                                 {/* Double the comics for seamless loop */}
                                 {[...featuredComics, ...featuredComics].map((comic, index) => (
