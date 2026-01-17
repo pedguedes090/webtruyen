@@ -427,8 +427,8 @@ function ReaderPage() {
                         <button
                             onClick={() => setShowSettings(!showSettings)}
                             className={`py-3 px-4 text-sm rounded flex items-center justify-center transition-colors ${showSettings
-                                    ? 'bg-primary text-white'
-                                    : 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
+                                ? 'bg-primary text-white'
+                                : 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
                                 }`}
                             title="Cài đặt"
                         >
@@ -477,8 +477,8 @@ function ReaderPage() {
                                                 key={option.value}
                                                 onClick={() => handleScaleChange(option.value)}
                                                 className={`px-3 py-2 text-sm rounded transition-colors ${imageScale === option.value
-                                                        ? 'bg-primary text-white'
-                                                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                    ? 'bg-primary text-white'
+                                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                                     }`}
                                             >
                                                 {option.label}
@@ -507,6 +507,76 @@ function ReaderPage() {
                     >
                         <VerticalAlignTopOutlined />
                     </motion.button>
+                )}
+            </AnimatePresence>
+
+            {/* Floating Settings button */}
+            <motion.button
+                onClick={() => setShowSettings(!showSettings)}
+                className={`fixed bottom-24 right-20 w-12 h-12 rounded-full shadow-lg transition-all flex items-center justify-center z-40 text-lg ${showSettings
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Cài đặt"
+            >
+                <SettingOutlined />
+            </motion.button>
+
+            {/* Floating Settings Panel */}
+            <AnimatePresence>
+                {showSettings && (
+                    <>
+                        <motion.div
+                            className="fixed inset-0 z-30"
+                            onClick={() => setShowSettings(false)}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                        />
+                        <motion.div
+                            className="fixed bottom-40 right-4 w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-50"
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                                <SettingOutlined /> Cài đặt đọc truyện
+                            </h3>
+
+                            {/* Reload button */}
+                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Tải lại ảnh</span>
+                                <button
+                                    onClick={() => { reloadImages(); setShowSettings(false); }}
+                                    className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-hover flex items-center gap-1.5 transition-colors"
+                                >
+                                    <ReloadOutlined /> Reload
+                                </button>
+                            </div>
+
+                            {/* Image scale */}
+                            <div>
+                                <span className="text-sm text-gray-600 dark:text-gray-400 block mb-3">Kích thước ảnh</span>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {scaleOptions.map(option => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => { handleScaleChange(option.value); }}
+                                            className={`px-3 py-2 text-sm rounded-lg transition-colors ${imageScale === option.value
+                                                    ? 'bg-primary text-white'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                }`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
 
