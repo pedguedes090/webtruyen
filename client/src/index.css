@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Custom CSS Variables for theme colors */
+@theme {
+    --color-primary: #ff6b35;
+    --color-primary-hover: #f7931e;
+
+    --color-dark-bg: #0f0f1a;
+    --color-dark-card: #1e1e32;
+    --color-dark-secondary: #1a1a2e;
+    --color-dark-tertiary: #252540;
+    --color-dark-border: #2a2a45;
+
+    --color-light-bg: #f5f5f5;
+    --color-light-card: #ffffff;
+    --color-light-secondary: #e8e8e8;
+    --color-light-tertiary: #e0e0e0;
+    --color-light-border: #d0d0d0;
+}
+
+/* Base styles */
+@layer base {
+    body {
+        font-family: 'Inter', system-ui, sans-serif;
+        @apply text-gray-900 dark:text-gray-100 bg-light-bg dark:bg-dark-bg transition-colors duration-300;
+    }
+
+    a {
+        @apply text-inherit no-underline transition-colors hover:text-primary;
+    }
+}
+
+/* Component styles */
+@layer components {
+    .btn {
+        @apply px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-2;
+    }
+
+    .btn-primary {
+        @apply bg-gradient-to-r from-primary to-primary-hover text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30;
+    }
+
+    .btn-secondary {
+        @apply bg-light-tertiary dark:bg-dark-tertiary text-gray-900 dark:text-gray-100 hover:bg-light-secondary dark:hover:bg-dark-secondary;
+    }
+
+    .btn-danger {
+        @apply bg-red-500 text-white hover:bg-red-600;
+    }
+
+    .card {
+        @apply bg-light-card dark:bg-dark-card rounded-xl shadow-md p-6;
+    }
+
+    .form-input {
+        @apply w-full px-4 py-2 bg-light-tertiary dark:bg-dark-tertiary border border-light-border dark:border-dark-border rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20;
+    }
+
+    .form-textarea {
+        @apply w-full px-4 py-2 bg-light-tertiary dark:bg-dark-tertiary border border-light-border dark:border-dark-border rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[120px] resize-y;
+    }
+
+    .form-select {
+        @apply w-full px-4 py-2 bg-light-tertiary dark:bg-dark-tertiary border border-light-border dark:border-dark-border rounded-lg text-sm text-gray-900 dark:text-gray-100 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer;
+    }
+
+    .form-label {
+        @apply block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1;
+    }
+
+    .section-title {
+        @apply flex items-center gap-2 text-lg font-semibold text-primary;
+    }
+
+    /* Mobile-friendly touch targets */
+    .touch-target {
+        @apply min-h-[44px] min-w-[44px];
+    }
+
+    /* Improved button for mobile */
+    .btn-mobile {
+        @apply px-3 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-2 min-h-[44px];
+    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-light-bg dark:bg-dark-bg;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-light-tertiary dark:bg-dark-tertiary rounded-full hover:bg-gray-400 dark:hover:bg-gray-600;
+}
+
+/* Toast animation */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast-animate {
+    animation: slideIn 0.3s ease;
+}

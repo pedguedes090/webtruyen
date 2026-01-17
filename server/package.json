@@ -1,0 +1,29 @@
+{
+    "name": "comic-server",
+    "version": "1.0.0",
+    "description": "Comic reading website server with SQLite",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+        "server": "node server.js",
+        "server:dev": "node --watch server.js",
+        "img": "cd ../image-server && node server.js",
+        "client": "cd ../client && npm run dev",
+        "build": "cd ../client && npm run build",
+        "start": "concurrently -n server,img -c blue,magenta \"npm run server\" \"npm run img\"",
+        "dev": "concurrently -n server,img,client -c blue,magenta,green \"npm run server:dev\" \"npm run img\" \"npm run client\""
+    },
+    "dependencies": {
+        "bcryptjs": "^3.0.3",
+        "better-sqlite3": "^11.0.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.0",
+        "express": "^4.18.2",
+        "express-rate-limit": "^8.2.1",
+        "helmet": "^8.1.0",
+        "jsonwebtoken": "^9.0.3"
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1"
+    }
+}
