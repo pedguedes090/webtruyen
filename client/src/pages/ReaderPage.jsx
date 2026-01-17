@@ -510,19 +510,27 @@ function ReaderPage() {
                 )}
             </AnimatePresence>
 
-            {/* Floating Settings button */}
-            <motion.button
-                onClick={() => setShowSettings(!showSettings)}
-                className={`fixed bottom-10 right-4 w-12 h-12 rounded-full shadow-lg transition-all flex items-center justify-center z-40 text-lg ${showSettings
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
-                    }`}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                title="Cài đặt"
-            >
-                <SettingOutlined />
-            </motion.button>
+            {/* Floating Settings button - auto hide like top nav */}
+            <AnimatePresence>
+                {showNav && (
+                    <motion.button
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={`fixed bottom-10 right-4 w-12 h-12 rounded-full shadow-lg transition-colors flex items-center justify-center z-40 text-lg ${showSettings
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
+                            }`}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        title="Cài đặt"
+                    >
+                        <SettingOutlined />
+                    </motion.button>
+                )}
+            </AnimatePresence>
 
             {/* Floating Settings Panel */}
             <AnimatePresence>
