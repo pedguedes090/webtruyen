@@ -513,9 +513,9 @@ function ReaderPage() {
             {/* Floating Settings button */}
             <motion.button
                 onClick={() => setShowSettings(!showSettings)}
-                className={`fixed bottom-24 right-20 w-12 h-12 rounded-full shadow-lg transition-all flex items-center justify-center z-40 text-lg ${showSettings
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
+                className={`fixed bottom-10 right-4 w-12 h-12 rounded-full shadow-lg transition-all flex items-center justify-center z-40 text-lg ${showSettings
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
                     }`}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -566,8 +566,8 @@ function ReaderPage() {
                                             key={option.value}
                                             onClick={() => { handleScaleChange(option.value); }}
                                             className={`px-3 py-2 text-sm rounded-lg transition-colors ${imageScale === option.value
-                                                    ? 'bg-primary text-white'
-                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                ? 'bg-primary text-white'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                                 }`}
                                         >
                                             {option.label}
