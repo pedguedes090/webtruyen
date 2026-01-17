@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import helmet from 'helmet';
 import * as db from './database.js';
-import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount } from './database.js';
+import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount, warmupCountCache, invalidateCountCache } from './database.js';
 import rateLimit from 'express-rate-limit';
 import { blockBots, validateApiParams, sanitizeHuggingFaceUrl } from './middleware/security.js';
 
@@ -562,6 +562,7 @@ app.post('/api/admin/comics', adminAuth, (req, res) => {
     try {
         const comic = db.createComic(req.body);
         invalidateGenreCache(); // Clear genre cache
+        invalidateCountCache(); // Clear count cache
         res.status(201).json(comic);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -609,6 +610,7 @@ app.delete('/api/admin/comics/:id', adminAuth, async (req, res) => {
 
         // Delete from database (will cascade delete chapters)
         db.deleteComic(req.params.id);
+        invalidateCountCache(); // Clear count cache
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -619,6 +621,7 @@ app.delete('/api/admin/comics/:id', adminAuth, async (req, res) => {
 app.post('/api/admin/chapters', adminAuth, (req, res) => {
     try {
         const chapter = db.createChapter(req.body);
+        invalidateCountCache(); // Clear count cache (affects recent count)
         res.status(201).json(chapter);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -656,6 +659,7 @@ app.delete('/api/admin/chapters/:id', adminAuth, async (req, res) => {
         }
 
         db.deleteChapter(req.params.id);
+        invalidateCountCache(); // Clear count cache
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -678,4 +682,6 @@ app.listen(PORT, () => {
     if (ADMIN_USERNAME === 'admin' && ADMIN_PASSWORD === 'admin123') {
         console.warn('⚠️  WARNING: Using default admin credentials. Please update .env file!');
     }
+    // Warm up cache on server start
+    warmupCountCache();
 });

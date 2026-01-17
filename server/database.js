@@ -163,32 +163,95 @@ export const getTopComics = (limit = 10, offset = 0) => {
   `).all(limit, offset);
 };
 
-// Count total comics (for pagination)
+// ============== COUNT CACHE SYSTEM ==============
+// Cache count queries to avoid expensive COUNT(*) on every request
+
+const countCache = {
+  total: { value: null, time: 0 },
+  recent: { value: null, time: 0 },
+  genres: new Map(), // genre -> { value, time }
+};
+const COUNT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Invalidate count cache (call when comics/chapters are created/updated/deleted)
+export const invalidateCountCache = () => {
+  countCache.total = { value: null, time: 0 };
+  countCache.recent = { value: null, time: 0 };
+  countCache.genres.clear();
+  console.log('📊 Count cache invalidated');
+};
+
+// Warm up cache on server start
+export const warmupCountCache = () => {
+  console.log('🔥 Warming up count cache...');
+  const start = Date.now();
+
+  // Pre-calculate counts
+  countCache.total.value = db.prepare('SELECT COUNT(*) as count FROM comics').get().count;
+  countCache.total.time = Date.now();
+
+  countCache.recent.value = db.prepare(`
+    SELECT COUNT(DISTINCT c.id) as count
+    FROM comics c
+    INNER JOIN chapters ch ON ch.comic_id = c.id
+  `).get().count;
+  countCache.recent.time = Date.now();
+
+  console.log(`✅ Count cache warmed up in ${Date.now() - start}ms (total: ${countCache.total.value}, recent: ${countCache.recent.value})`);
+};
+
+// Count total comics (for pagination) - CACHED
 export const getTotalComicsCount = (search = '') => {
+  // Search queries are not cached (too many variations)
   if (search) {
     return db.prepare(`
       SELECT COUNT(*) as count FROM comics 
       WHERE title LIKE ? OR author LIKE ?
     `).get(`%${search}%`, `%${search}%`).count;
   }
-  return db.prepare('SELECT COUNT(*) as count FROM comics').get().count;
+
+  const now = Date.now();
+  if (countCache.total.value !== null && (now - countCache.total.time) < COUNT_CACHE_TTL) {
+    return countCache.total.value;
+  }
+
+  countCache.total.value = db.prepare('SELECT COUNT(*) as count FROM comics').get().count;
+  countCache.total.time = now;
+  return countCache.total.value;
 };
 
-// Count comics with chapters (for recent pagination)
+// Count comics with chapters (for recent pagination) - CACHED
 export const getRecentComicsCount = () => {
-  return db.prepare(`
+  const now = Date.now();
+  if (countCache.recent.value !== null && (now - countCache.recent.time) < COUNT_CACHE_TTL) {
+    return countCache.recent.value;
+  }
+
+  countCache.recent.value = db.prepare(`
     SELECT COUNT(DISTINCT c.id) as count
     FROM comics c
     INNER JOIN chapters ch ON ch.comic_id = c.id
   `).get().count;
+  countCache.recent.time = now;
+  return countCache.recent.value;
 };
 
-// Count comics by genre
+// Count comics by genre - CACHED
 export const getComicsByGenreCount = (genre) => {
-  return db.prepare(`
+  const now = Date.now();
+  const cached = countCache.genres.get(genre);
+
+  if (cached && (now - cached.time) < COUNT_CACHE_TTL) {
+    return cached.value;
+  }
+
+  const count = db.prepare(`
     SELECT COUNT(*) as count FROM comics 
     WHERE genres LIKE ?
   `).get(`%"${genre}"%`).count;
+
+  countCache.genres.set(genre, { value: count, time: now });
+  return count;
 };
 
 // Get random featured comics from top views

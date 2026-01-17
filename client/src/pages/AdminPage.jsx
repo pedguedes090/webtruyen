@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     adminLogin,
     adminLogout,
@@ -33,7 +33,10 @@ import {
     UploadOutlined,
     PictureOutlined,
     LoadingOutlined,
-    FolderOpenOutlined
+    FolderOpenOutlined,
+    SearchOutlined,
+    LeftOutlined,
+    RightOutlined
 } from '@ant-design/icons';
 import ImageManager from '../components/ImageManager';
 import { PLACEHOLDER_THUMB } from '../constants/placeholders';
@@ -45,10 +48,16 @@ function AdminPage() {
     const [loginError, setLoginError] = useState('');
 
     const [comics, setComics] = useState([]);
+    const [totalComics, setTotalComics] = useState(0);
     const [selectedComic, setSelectedComic] = useState(null);
     const [chapters, setChapters] = useState([]);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
+
+    // Search and pagination state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const COMICS_PER_PAGE = 10;
 
     const [comicForm, setComicForm] = useState({
         title: '', description: '', cover_url: '', author: '', status: 'ongoing', genres: ''
@@ -77,8 +86,8 @@ function AdminPage() {
     const serverFileInputRefs = useRef({});
 
     useEffect(() => {
-        if (isLoggedIn) fetchComics();
-    }, [isLoggedIn]);
+        if (isLoggedIn) fetchComics(1, '');
+    }, [isLoggedIn, fetchComics]);
 
     useEffect(() => {
         if (selectedComic?.id) fetchChapters(selectedComic.id);
@@ -91,17 +100,36 @@ function AdminPage() {
         };
     }, [coverPreview]);
 
-    const fetchComics = async () => {
+    const fetchComics = useCallback(async (page = 1, search = '') => {
         setLoading(true);
         try {
-            const data = await getComics(100);
-            setComics(data);
+            const offset = (page - 1) * COMICS_PER_PAGE;
+            const response = await getComics(COMICS_PER_PAGE, offset, search);
+            setComics(response.data);
+            setTotalComics(response.total || 0);
         } catch (error) {
             showToast('Lỗi tải danh sách truyện', 'error');
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    // Debounced search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setCurrentPage(1);
+            fetchComics(1, searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, fetchComics]);
+
+    // Handle page change
+    const handlePageChange = (newPage) => {
+        setCurrentPage(newPage);
+        fetchComics(newPage, searchQuery);
     };
+
+    const totalPages = Math.ceil(totalComics / COMICS_PER_PAGE);
 
     const fetchChapters = async (comicId) => {
         try {
@@ -652,52 +680,134 @@ function AdminPage() {
 
                 {/* Comic List */}
                 <div className="bg-white dark:bg-dark-card p-4 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border flex flex-col h-[500px]">
-                    <h2 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2">
-                        <BookOutlined /> Danh sách truyện ({comics.length})
-                    </h2>
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+                            <BookOutlined /> Danh sách truyện ({totalComics})
+                        </h2>
+                    </div>
+
+                    {/* Search Box */}
+                    <div className="relative mb-3">
+                        <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border rounded text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
+                            placeholder="Tìm kiếm truyện..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                                <CloseOutlined />
+                            </button>
+                        )}
+                    </div>
+
                     {loading ? (
                         <div className="flex-1 flex justify-center items-center">
                             <div className="w-8 h-8 border-4 border-gray-200 dark:border-dark-tertiary border-t-primary rounded-full animate-spin" />
                         </div>
+                    ) : comics.length === 0 ? (
+                        <div className="flex-1 flex flex-col justify-center items-center text-gray-400">
+                            <BookOutlined className="text-3xl mb-2 opacity-50" />
+                            <p className="text-sm">{searchQuery ? 'Không tìm thấy truyện nào' : 'Chưa có truyện nào'}</p>
+                        </div>
                     ) : (
-                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                            {comics.map(comic => (
-                                <div
-                                    key={comic.id}
-                                    className={`flex items-center gap-3 p-2 rounded border transition-all cursor-pointer ${selectedComic?.id === comic.id
-                                        ? 'bg-primary/10 border-primary shadow-sm'
-                                        : 'bg-gray-50 dark:bg-dark-secondary border-gray-100 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-tertiary'
-                                        }`}
-                                    onClick={() => setSelectedComic(comic)}
-                                >
-                                    <img
-                                        src={resolveImageUrl(comic.cover_url) || PLACEHOLDER_THUMB}
-                                        alt=""
-                                        className="w-10 h-14 object-cover rounded shadow-sm bg-gray-200 dark:bg-gray-700"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{comic.title}</div>
-                                        <div className="text-xs text-gray-500 truncate">{comic.author || 'Chưa rõ tác giả'}</div>
+                        <>
+                            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                {comics.map(comic => (
+                                    <div
+                                        key={comic.id}
+                                        className={`flex items-center gap-3 p-2 rounded border transition-all cursor-pointer ${selectedComic?.id === comic.id
+                                            ? 'bg-primary/10 border-primary shadow-sm'
+                                            : 'bg-gray-50 dark:bg-dark-secondary border-gray-100 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-tertiary'
+                                            }`}
+                                        onClick={() => setSelectedComic(comic)}
+                                    >
+                                        <img
+                                            src={resolveImageUrl(comic.cover_url) || PLACEHOLDER_THUMB}
+                                            alt=""
+                                            className="w-10 h-14 object-cover rounded shadow-sm bg-gray-200 dark:bg-gray-700"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{comic.title}</div>
+                                            <div className="text-xs text-gray-500 truncate">{comic.author || 'Chưa rõ tác giả'}</div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button
+                                                className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                                                onClick={(e) => { e.stopPropagation(); handleEditComic(comic); }}
+                                                title="Sửa"
+                                            >
+                                                <EditOutlined />
+                                            </button>
+                                            <button
+                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteComic(comic.id); }}
+                                                title="Xóa"
+                                            >
+                                                <DeleteOutlined />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-1">
+                                ))}
+                            </div>
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100 dark:border-dark-border">
+                                    <span className="text-xs text-gray-500">
+                                        Trang {currentPage}/{totalPages}
+                                    </span>
+                                    <div className="flex items-center gap-1">
                                         <button
-                                            className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); handleEditComic(comic); }}
-                                            title="Sửa"
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                            className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            <EditOutlined />
+                                            <LeftOutlined />
                                         </button>
+
+                                        {/* Page numbers */}
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let page;
+                                            if (totalPages <= 5) {
+                                                page = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                page = i + 1;
+                                            } else if (currentPage >= totalPages - 2) {
+                                                page = totalPages - 4 + i;
+                                            } else {
+                                                page = currentPage - 2 + i;
+                                            }
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => handlePageChange(page)}
+                                                    className={`min-w-[28px] h-7 text-xs rounded transition-colors ${currentPage === page
+                                                            ? 'bg-primary text-white'
+                                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-tertiary'
+                                                        }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        })}
+
                                         <button
-                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteComic(comic.id); }}
-                                            title="Xóa"
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                            className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            <DeleteOutlined />
+                                            <RightOutlined />
                                         </button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                        </>
                     )}
                 </div>
 
