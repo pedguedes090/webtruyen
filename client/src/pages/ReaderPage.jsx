@@ -12,7 +12,11 @@ import {
     ArrowLeftOutlined,
     DownOutlined,
     CloudServerOutlined,
-    GlobalOutlined
+    GlobalOutlined,
+    SettingOutlined,
+    ReloadOutlined,
+    ZoomInOutlined,
+    ZoomOutOutlined
 } from '@ant-design/icons';
 
 function ReaderPage() {
@@ -32,6 +36,13 @@ function ReaderPage() {
     const [servers, setServers] = useState([]);
     const [currentServer, setCurrentServer] = useState(null);
     const [showServerList, setShowServerList] = useState(false);
+
+    // Settings state
+    const [showSettings, setShowSettings] = useState(false);
+    const [imageScale, setImageScale] = useState(() => {
+        return localStorage.getItem('readerImageScale') || 'medium';
+    });
+    const [imageKey, setImageKey] = useState(0); // For forcing image reload
 
     useEffect(() => {
         const fetchData = async () => {
@@ -167,6 +178,28 @@ function ReaderPage() {
 
     function scrollToTop() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Image scale options
+    const scaleOptions = [
+        { value: 'small', label: 'Nhỏ', class: 'max-w-md' },
+        { value: 'medium', label: 'Vừa', class: 'max-w-2xl' },
+        { value: 'large', label: 'Lớn', class: 'max-w-4xl' },
+        { value: 'full', label: 'Toàn màn', class: 'max-w-full' },
+    ];
+
+    function getScaleClass() {
+        const option = scaleOptions.find(o => o.value === imageScale);
+        return option ? option.class : 'max-w-2xl';
+    }
+
+    function handleScaleChange(scale) {
+        setImageScale(scale);
+        localStorage.setItem('readerImageScale', scale);
+    }
+
+    function reloadImages() {
+        setImageKey(prev => prev + 1);
     }
 
     if (loading) {
@@ -340,7 +373,7 @@ function ReaderPage() {
 
             {/* Images Container - Auto responsive with transition */}
             <motion.div
-                className="w-full max-w-2xl mx-auto pt-14"
+                className={`w-full ${getScaleClass()} mx-auto pt-14`}
                 onClick={() => setShowNav(!showNav)}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: isTransitioning ? 0 : 1 }}
@@ -349,7 +382,7 @@ function ReaderPage() {
                 {currentServer && currentServer.image_urls && currentServer.image_urls.length > 0 ? (
                     currentServer.image_urls.map((url, index) => (
                         <CanvasImage
-                            key={`${currentServer.server_name}-${index}`}
+                            key={`${currentServer.server_name}-${index}-${imageKey}`}
                             src={resolveImageUrl(url)}
                             alt={`Trang ${index + 1}`}
                             className="w-full block select-none"
@@ -390,6 +423,18 @@ function ReaderPage() {
                             <UnorderedListOutlined />
                         </Link>
 
+                        {/* Settings button */}
+                        <button
+                            onClick={() => setShowSettings(!showSettings)}
+                            className={`py-3 px-4 text-sm rounded flex items-center justify-center transition-colors ${showSettings
+                                    ? 'bg-primary text-white'
+                                    : 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700'
+                                }`}
+                            title="Cài đặt"
+                        >
+                            <SettingOutlined />
+                        </button>
+
                         <button
                             onClick={goToNextChapter}
                             disabled={!chapter.next_chapter}
@@ -401,6 +446,49 @@ function ReaderPage() {
                             {chapter.next_chapter ? 'Tiếp' : 'Hết'} <RightOutlined />
                         </button>
                     </div>
+
+                    {/* Settings Panel */}
+                    <AnimatePresence>
+                        {showSettings && (
+                            <motion.div
+                                className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {/* Reload button */}
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">Tải lại ảnh</span>
+                                    <button
+                                        onClick={reloadImages}
+                                        className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-primary-hover flex items-center gap-2 transition-colors"
+                                    >
+                                        <ReloadOutlined /> Reload
+                                    </button>
+                                </div>
+
+                                {/* Image scale */}
+                                <div>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300 block mb-2">Kích thước ảnh</span>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {scaleOptions.map(option => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => handleScaleChange(option.value)}
+                                                className={`px-3 py-2 text-sm rounded transition-colors ${imageScale === option.value
+                                                        ? 'bg-primary text-white'
+                                                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                    }`}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
