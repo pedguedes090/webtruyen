@@ -340,7 +340,7 @@ function ReaderPage() {
 
             {/* Images Container - Auto responsive with transition */}
             <motion.div
-                className="w-full max-w-3xl mx-auto pt-14"
+                className="w-full max-w-2xl mx-auto pt-14"
                 onClick={() => setShowNav(!showNav)}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: isTransitioning ? 0 : 1 }}
