@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { HistoryOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import { PLACEHOLDER_SMALL } from '../constants/placeholders';
 import { formatTimeAgo } from '../utils/formatters';
+import { resolveImageUrl } from '../api';
 
 function HistoryPage() {
     const [history, setHistory] = useState([]);
@@ -58,7 +59,7 @@ function HistoryPage() {
                                 {/* Cover */}
                                 <Link to={`/truyen/${item.comicSlug}`} className="flex-shrink-0">
                                     <img
-                                        src={item.coverUrl || PLACEHOLDER_SMALL}
+                                        src={resolveImageUrl(item.coverUrl) || PLACEHOLDER_SMALL}
                                         alt={item.comicTitle}
                                         className="w-12 h-16 object-cover"
                                     />
