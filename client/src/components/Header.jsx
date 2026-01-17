@@ -167,9 +167,7 @@ function Header() {
                             </Link>
                         )}
 
-                        <Link to="/admin" className="hidden sm:flex items-center gap-1 hover:text-yellow-300 transition-colors">
-                            <SettingOutlined /> <span className="hidden sm:inline">Admin</span>
-                        </Link>
+
                     </div>
                 </div>
             </div>
@@ -267,20 +265,7 @@ function Header() {
                                 ))}
                             </nav>
 
-                            {/* Divider */}
-                            <hr className="border-gray-200 dark:border-dark-border mx-4" />
 
-                            {/* Admin & Settings */}
-                            <div className="py-2">
-                                <Link
-                                    to="/admin"
-                                    onClick={() => setShowMobileMenu(false)}
-                                    className="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-tertiary hover:text-primary transition-colors"
-                                >
-                                    <SettingOutlined className="text-lg" />
-                                    <span className="font-medium">Quản trị</span>
-                                </Link>
-                            </div>
                         </motion.div>
                     </>
                 )}

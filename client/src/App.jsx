@@ -46,7 +46,7 @@ function AppContent() {
                     <Route path="/read/:id" element={<ReaderPage />} />
                     <Route path="/search" element={<SearchPage />} />
                     <Route path="/history" element={<HistoryPage />} />
-                    <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/adminaddct" element={<AdminPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/genres" element={<GenresPage />} />

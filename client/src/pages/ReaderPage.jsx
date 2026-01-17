@@ -26,6 +26,7 @@ function ReaderPage() {
     const [showChapterList, setShowChapterList] = useState(false);
     const [readingProgress, setReadingProgress] = useState(0);
     const [showScrollTop, setShowScrollTop] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     // Server state
     const [servers, setServers] = useState([]);
@@ -34,6 +35,7 @@ function ReaderPage() {
 
     useEffect(() => {
         const fetchData = async () => {
+            setIsTransitioning(true);
             try {
                 let chapterData, comicData;
 
@@ -79,6 +81,8 @@ function ReaderPage() {
                 console.error('Error fetching chapter:', error);
             } finally {
                 setLoading(false);
+                // Delay để animation fade in chạy mượt
+                setTimeout(() => setIsTransitioning(false), 50);
             }
         };
         fetchData();
@@ -334,10 +338,13 @@ function ReaderPage() {
                 )}
             </AnimatePresence>
 
-            {/* Images Container - Auto responsive */}
-            <div
+            {/* Images Container - Auto responsive with transition */}
+            <motion.div
                 className="w-full max-w-3xl mx-auto pt-14"
                 onClick={() => setShowNav(!showNav)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isTransitioning ? 0 : 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
                 {currentServer && currentServer.image_urls && currentServer.image_urls.length > 0 ? (
                     currentServer.image_urls.map((url, index) => (
@@ -354,7 +361,7 @@ function ReaderPage() {
                         {servers.length > 1 && <p className="text-xs mt-2">Hãy thử đổi server khác</p>}
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Bottom Navigation */}
             <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-4 sm:py-6">
