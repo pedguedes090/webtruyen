@@ -71,7 +71,7 @@ function AdminPage() {
 
     // Multi-server state
     const [servers, setServers] = useState([
-        { id: 'default', name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', fetching: false }
+        { id: 'default', name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', tiktokIds: '', fetching: false }
     ]);
 
     // Upload states
@@ -188,7 +188,7 @@ function AdminPage() {
     const handleAddServer = () => {
         setServers(prev => [
             ...prev,
-            { id: Date.now(), name: `Server ${prev.length + 1}`, type: 'url', content: '', files: [], hfUrl: '', fetching: false }
+            { id: Date.now(), name: `Server ${prev.length + 1}`, type: 'url', content: '', files: [], hfUrl: '', tiktokIds: '', fetching: false }
         ]);
     };
 
@@ -360,6 +360,10 @@ function AdminPage() {
                         return;
                     }
                     setUploading(false);
+                } else if (server.type === 'tiktok' && server.tiktokIds.trim()) {
+                    // Process TikTok IDs - add tiktok: prefix for server-side resolution
+                    const ids = server.tiktokIds.split(/[\n,]/).map(id => id.trim()).filter(id => id);
+                    imageUrls = ids.map(id => `tiktok:${id}`);
                 } else {
                     imageUrls = server.content.split(/[\n,]/).map(url => url.trim()).filter(url => url);
                 }
@@ -397,7 +401,7 @@ function AdminPage() {
             // Reset form
             setEditingChapter(null);
             setChapterForm({ chapter_number: '', title: '' });
-            setServers([{ id: Date.now(), name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', fetching: false }]);
+            setServers([{ id: Date.now(), name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', tiktokIds: '', fetching: false }]);
             setUploadProgress(0);
         } catch (error) {
             console.error('Error submitting chapter:', error);
@@ -426,6 +430,7 @@ function AdminPage() {
                     content: s.image_urls.join('\n'),
                     files: [],
                     hfUrl: '',
+                    tiktokIds: '',
                     fetching: false
                 }));
                 setServers(formattedServers);
@@ -439,13 +444,14 @@ function AdminPage() {
                     content: urls.join('\n'),
                     files: [],
                     hfUrl: '',
+                    tiktokIds: '',
                     fetching: false
                 }]);
             }
         } catch (e) {
             console.error("Error parsing chapter images for edit", e);
             // Fallback
-            setServers([{ id: Date.now(), name: 'Server 1', type: 'url', content: '', files: [], hfUrl: '', fetching: false }]);
+            setServers([{ id: Date.now(), name: 'Server 1', type: 'url', content: '', files: [], hfUrl: '', tiktokIds: '', fetching: false }]);
         }
     };
 
@@ -458,7 +464,7 @@ function AdminPage() {
             if (editingChapter?.id === id) {
                 setEditingChapter(null);
                 setChapterForm({ chapter_number: '', title: '' });
-                setServers([{ id: Date.now(), name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', fetching: false }]);
+                setServers([{ id: Date.now(), name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', tiktokIds: '', fetching: false }]);
             }
         } catch (error) {
             console.error('Error deleting chapter:', error);
@@ -879,11 +885,12 @@ function AdminPage() {
                                         </div>
 
                                         {/* Tabs */}
-                                        <div className="flex gap-1 mb-2">
+                                        <div className="flex gap-1 mb-2 flex-wrap">
                                             {[
                                                 { k: 'url', l: 'Nhập URL' },
                                                 { k: 'upload', l: 'Upload' },
-                                                { k: 'huggingface', l: 'HuggingFace' }
+                                                { k: 'huggingface', l: 'HuggingFace' },
+                                                { k: 'tiktok', l: 'TikTok' }
                                             ].map(t => (
                                                 <button
                                                     key={t.k}
@@ -959,6 +966,18 @@ function AdminPage() {
                                                 </button>
                                             </div>
                                         )}
+
+                                        {server.type === 'tiktok' && (
+                                            <div className="space-y-2">
+                                                <textarea
+                                                    className="w-full px-3 py-2 bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border rounded text-xs text-gray-800 dark:text-gray-200 outline-none focus:border-primary font-mono min-h-[80px]"
+                                                    placeholder="Nhập danh sách ID ảnh TikTok (mỗi dòng 1 ID hoặc phân cách bằng dấu phẩy)&#10;Ví dụ: d5079cbad56e85fb8a4558f53a6d97d1"
+                                                    value={server.tiktokIds}
+                                                    onChange={(e) => handleServerChange(server.id, 'tiktokIds', e.target.value)}
+                                                />
+                                                <p className="text-[10px] text-gray-400">ID sẽ được ghép với base URL từ server config khi đọc</p>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
 
@@ -987,7 +1006,7 @@ function AdminPage() {
                                     onClick={() => {
                                         setEditingChapter(null);
                                         setChapterForm({ chapter_number: '', title: '' });
-                                        setServers([{ id: Date.now(), name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', fetching: false }]);
+                                        setServers([{ id: Date.now(), name: 'Server VIP', type: 'url', content: '', files: [], hfUrl: '', tiktokIds: '', fetching: false }]);
                                     }}
                                 >
                                     <CloseOutlined /> Hủy sửa

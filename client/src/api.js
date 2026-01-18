@@ -201,6 +201,12 @@ export const fetchHuggingFaceImages = async (folderUrl) => {
     return response.data;
 };
 
+// Get TikTok image base URL from server config
+export const getTikTokBaseUrl = async () => {
+    const response = await axios.get(`${API_BASE}/config/tiktok-base-url`);
+    return response.data.baseUrl;
+};
+
 // ============== IMAGE SERVER API ==============
 
 // Get image server base URL (for displaying images)

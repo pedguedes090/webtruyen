@@ -23,6 +23,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'your-admin-secret-key-change-in-production';
 const IMAGE_SERVER_URL = process.env.IMAGE_SERVER_URL || 'http://localhost:3002';
+const TIKTOK_IMAGE_BASE_URL = process.env.TIKTOK_IMAGE_BASE_URL || 'https://p16-oec-sg.ibyteimg.com/obj/tos-alisg-avt-0068';
 
 // Helper: Delete images from Image Server (fire and forget)
 async function deleteImagesFromServer(path, token) {
@@ -54,9 +55,12 @@ function slugify(text) {
 app.set('trust proxy', 1);
 
 // Rate Limiting
+// Tính toán: 500 req/15 phút = ~0.56 req/giây/user
+// Server SQLite + cache có thể xử lý 100-200 req/giây tổng → rất an toàn
+// Cho phép đọc marathon + shared IP mà không bị block
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 300, // limit each IP to 300 requests per windowMs
+    max: 500, // limit each IP to 500 requests per windowMs (increased from 300)
     standardHeaders: true,
     legacyHeaders: false,
     validate: { xForwardedForHeader: false }, // Skip X-Forwarded-For validation
@@ -272,6 +276,13 @@ app.get('/api/auth/me', userAuth, (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// ============== CONFIG ROUTES ==============
+
+// Get TikTok image base URL (for admin to build image URLs from IDs)
+app.get('/api/config/tiktok-base-url', (req, res) => {
+    res.json({ baseUrl: TIKTOK_IMAGE_BASE_URL });
 });
 
 // ============== GENRES ROUTES ==============

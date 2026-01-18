@@ -57,6 +57,34 @@ export function slugify(text) {
     .replace(/^-+|-+$/g, '');
 }
 
+// Helper: Resolve TikTok image URLs from tiktok: prefix format
+// Stored: tiktok:d5079cbad56e85fb8a4558f53a6d97d1
+// Resolved: https://p16-oec-sg.ibyteimg.com/obj/tos-alisg-avt-0068/d5079cbad56e85fb8a4558f53a6d97d1
+const TIKTOK_IMAGE_BASE_URL = process.env.TIKTOK_IMAGE_BASE_URL || 'https://p16-oec-sg.ibyteimg.com/obj/tos-alisg-avt-0068';
+
+export function resolveTiktokUrls(imageUrls) {
+  if (!Array.isArray(imageUrls)) return imageUrls;
+
+  return imageUrls.map(serverItem => {
+    if (typeof serverItem === 'object' && serverItem.image_urls) {
+      // New format: { server_name, image_urls }
+      return {
+        ...serverItem,
+        image_urls: serverItem.image_urls.map(url => {
+          if (typeof url === 'string' && url.startsWith('tiktok:')) {
+            return `${TIKTOK_IMAGE_BASE_URL}/${url.substring(7)}`;
+          }
+          return url;
+        })
+      };
+    } else if (typeof serverItem === 'string' && serverItem.startsWith('tiktok:')) {
+      // Legacy format: array of strings  
+      return `${TIKTOK_IMAGE_BASE_URL}/${serverItem.substring(7)}`;
+    }
+    return serverItem;
+  });
+}
+
 // Initialize database schema
 db.exec(`
   CREATE TABLE IF NOT EXISTS comics (
@@ -384,7 +412,7 @@ export const getChaptersByComicId = (comicId) => {
 
   return chapters.map(ch => {
     try {
-      ch.image_urls = JSON.parse(ch.image_urls || '[]');
+      ch.image_urls = resolveTiktokUrls(JSON.parse(ch.image_urls || '[]'));
     } catch (e) {
       ch.image_urls = [];
     }
@@ -396,7 +424,7 @@ export const getChapterById = (id) => {
   const chapter = db.prepare('SELECT * FROM chapters WHERE id = ?').get(id);
   if (chapter) {
     try {
-      chapter.image_urls = JSON.parse(chapter.image_urls || '[]');
+      chapter.image_urls = resolveTiktokUrls(JSON.parse(chapter.image_urls || '[]'));
     } catch (e) {
       chapter.image_urls = [];
     }
@@ -413,7 +441,7 @@ export const getChapterByComicSlugAndNumber = (comicSlug, chapterNumber) => {
 
   if (chapter) {
     try {
-      chapter.image_urls = JSON.parse(chapter.image_urls || '[]');
+      chapter.image_urls = resolveTiktokUrls(JSON.parse(chapter.image_urls || '[]'));
     } catch (e) {
       chapter.image_urls = [];
     }
