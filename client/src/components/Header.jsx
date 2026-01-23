@@ -71,7 +71,7 @@ function Header() {
                     <Link to="/" className="flex items-center gap-1.5 sm:gap-2 text-white font-bold text-base sm:text-lg">
                         <BookOutlined className="text-lg sm:text-xl" />
                         <span className="text-white">Truyện</span>
-                        <span>Dex</span>
+                        <span>Launch</span>
                     </Link>
 
                     {/* Search - Hidden on very small screens, visible on sm+ */}

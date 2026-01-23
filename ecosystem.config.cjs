@@ -39,3 +39,10 @@ module.exports = {
         }
     ]
 };
+
+// To start the applications, run: pm2 start ecosystem.config.cjs
+// To monitor the applications, run: pm2 monit
+// To view logs, run: pm2 logs
+// To restart applications, run: pm2 restart comic-server image-server
+// To stop applications, run: pm2 stop comic-server image-server
+// To delete applications, run: pm2 delete comic-server image-server
