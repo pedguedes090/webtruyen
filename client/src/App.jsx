@@ -12,6 +12,7 @@ const ReaderPage = lazy(() => import('./pages/ReaderPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
+const GroupDashboard = lazy(() => import('./pages/GroupDashboard'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const GenresPage = lazy(() => import('./pages/GenresPage'));
@@ -47,6 +48,7 @@ function AppContent() {
                     <Route path="/search" element={<SearchPage />} />
                     <Route path="/history" element={<HistoryPage />} />
                     <Route path="/adminaddct" element={<AdminPage />} />
+                    <Route path="/group/dashboard" element={<GroupDashboard />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/genres" element={<GenresPage />} />

@@ -64,23 +64,46 @@ const upload = multer({
 });
 
 // Admin JWT Auth Middleware
-function adminAuth(req, res, next) {
+// Management JWT Auth Middleware (Supports Admin and Group)
+function managementAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const token = authHeader.split(' ')[1];
+
+    // 1. Try Admin Token (using existing JWT_SECRET)
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Admin access required' });
+        if (decoded.role === 'admin') {
+            req.user = decoded;
+            return next();
         }
-        req.admin = decoded;
-        next();
-    } catch (error) {
-        return res.status(401).json({ error: 'Invalid token' });
+    } catch (e) {
+        // Continue to try User Token
     }
+
+    // 2. Try User Token (using USER_JWT_SECRET)
+    // If request comes from a group user, they'll have a token signed with USER_JWT_SECRET
+    try {
+        // If USER_JWT_SECRET is not set, we can't verify user tokens, so fail.
+        // Fallback: If USER_JWT_SECRET is not set, maybe JWT_SECRET covers both?
+        // But per DEPLOY.md they are different. 
+        // We really need USER_JWT_SECRET here.
+        if (process.env.USER_JWT_SECRET) {
+            const decoded = jwt.verify(token, process.env.USER_JWT_SECRET);
+            // Check role
+            if (decoded.role === 'admin' || decoded.role === 'group') {
+                req.user = decoded;
+                return next();
+            }
+        }
+    } catch (error) {
+        // Fail
+    }
+
+    return res.status(401).json({ error: 'Invalid token or insufficient permissions' });
 }
 
 // Helper: Generate slug from title
@@ -134,7 +157,7 @@ app.get('/health', (req, res) => {
 });
 
 // Upload cover image
-app.post('/upload/cover', adminAuth, upload.single('cover'), async (req, res) => {
+app.post('/upload/cover', managementAuth, upload.single('cover'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -165,7 +188,7 @@ app.post('/upload/cover', adminAuth, upload.single('cover'), async (req, res) =>
 });
 
 // Upload chapter images (multiple)
-app.post('/upload/chapter', adminAuth, upload.array('images', 500), async (req, res) => {
+app.post('/upload/chapter', managementAuth, upload.array('images', 500), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
@@ -234,7 +257,7 @@ app.use('/images', express.static(UPLOAD_DIR, {
 }));
 
 // Delete image (admin only)
-app.delete('/images/*', adminAuth, (req, res) => {
+app.delete('/images/*', managementAuth, (req, res) => {
     try {
         const imagePath = req.params[0];
         const fullPath = path.join(UPLOAD_DIR, imagePath);
@@ -260,7 +283,7 @@ app.delete('/images/*', adminAuth, (req, res) => {
 });
 
 // Delete entire chapter folder (admin only)
-app.delete('/chapters/:comicSlug/:chapterNumber', adminAuth, (req, res) => {
+app.delete('/chapters/:comicSlug/:chapterNumber', managementAuth, (req, res) => {
     try {
         const { comicSlug, chapterNumber } = req.params;
         const chapterDir = path.join(UPLOAD_DIR, 'chapters', comicSlug, chapterNumber);
@@ -278,7 +301,7 @@ app.delete('/chapters/:comicSlug/:chapterNumber', adminAuth, (req, res) => {
 });
 
 // Get storage stats
-app.get('/stats', adminAuth, (req, res) => {
+app.get('/stats', managementAuth, (req, res) => {
     try {
         const getDirectorySize = (dirPath) => {
             let size = 0;
@@ -321,7 +344,7 @@ app.get('/stats', adminAuth, (req, res) => {
 // ============== BROWSE/MANAGE ROUTES ==============
 
 // Browse root folders (covers, chapters)
-app.get('/browse', adminAuth, (req, res) => {
+app.get('/browse', managementAuth, (req, res) => {
     try {
         const folders = ['covers', 'chapters'].map(name => {
             const folderPath = path.join(UPLOAD_DIR, name);
@@ -340,7 +363,7 @@ app.get('/browse', adminAuth, (req, res) => {
 });
 
 // Browse a specific folder
-app.get('/browse/*', adminAuth, (req, res) => {
+app.get('/browse/*', managementAuth, (req, res) => {
     try {
         const relativePath = req.params[0] || '';
         const fullPath = path.join(UPLOAD_DIR, relativePath);
@@ -416,7 +439,7 @@ app.get('/browse/*', adminAuth, (req, res) => {
 });
 
 // Create folder
-app.post('/folder', adminAuth, (req, res) => {
+app.post('/folder', managementAuth, (req, res) => {
     try {
         const { path: folderPath } = req.body;
         if (!folderPath) {
@@ -444,7 +467,7 @@ app.post('/folder', adminAuth, (req, res) => {
 });
 
 // Delete folder
-app.delete('/folder/*', adminAuth, (req, res) => {
+app.delete('/folder/*', managementAuth, (req, res) => {
     try {
         const relativePath = req.params[0];
         const fullPath = path.join(UPLOAD_DIR, relativePath);
@@ -473,7 +496,7 @@ app.delete('/folder/*', adminAuth, (req, res) => {
 });
 
 // Rename file or folder
-app.put('/rename', adminAuth, (req, res) => {
+app.put('/rename', managementAuth, (req, res) => {
     try {
         const { oldPath, newName } = req.body;
         if (!oldPath || !newName) {
@@ -511,7 +534,7 @@ app.put('/rename', adminAuth, (req, res) => {
 });
 
 // Upload image to specific folder
-app.post('/upload/to-folder', adminAuth, upload.array('images', 500), async (req, res) => {
+app.post('/upload/to-folder', managementAuth, upload.array('images', 500), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
@@ -558,7 +581,7 @@ app.post('/upload/to-folder', adminAuth, upload.array('images', 500), async (req
 });
 
 // Replace a specific image
-app.put('/replace/*', adminAuth, upload.single('image'), async (req, res) => {
+app.put('/replace/*', managementAuth, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });

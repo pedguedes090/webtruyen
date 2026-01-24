@@ -150,6 +150,15 @@ function Header() {
                                                     <HistoryOutlined /> Lịch sử
                                                 </Link>
                                                 <hr className="border-gray-200 dark:border-dark-border" />
+                                                {(user?.role === 'admin' || user?.role === 'group') && (
+                                                    <Link
+                                                        to="/group/dashboard"
+                                                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-tertiary hover:text-primary"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                    >
+                                                        <SettingOutlined /> Quản lý truyện
+                                                    </Link>
+                                                )}
                                                 <button
                                                     onClick={handleLogout}
                                                     className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-tertiary hover:text-red-400"

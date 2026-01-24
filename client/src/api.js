@@ -29,11 +29,17 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Helper to get admin auth header (JWT)
+// Helper to get admin/management auth header (JWT)
 function getAuthHeader() {
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-        return { Authorization: `Bearer ${token}` };
+    // Try Admin Token first
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) {
+        return { Authorization: `Bearer ${adminToken}` };
+    }
+    // Fallback to User Token (for Group Dashboard)
+    const userToken = localStorage.getItem('authToken');
+    if (userToken) {
+        return { Authorization: `Bearer ${userToken}` };
     }
     return {};
 }
@@ -63,6 +69,15 @@ export const getComics = async (limit = 20, offset = 0, search = '', sort = '') 
     if (sort) params.append('sort', sort);
     const response = await axios.get(`${API_BASE}/comics?${params}`);
     // Returns { data: [...], total: number }
+    return response.data;
+};
+
+export const getMyComics = async (limit = 20, offset = 0, search = '') => {
+    const params = new URLSearchParams({ limit, offset });
+    if (search) params.append('search', search);
+    const response = await axios.get(`${API_BASE}/admin/comics/my?${params}`, {
+        headers: getAuthHeader()
+    });
     return response.data;
 };
 

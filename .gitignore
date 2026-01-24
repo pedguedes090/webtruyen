@@ -30,3 +30,7 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+/server/comics.db
+/server/*.db.bak.*
+/image-server/uploads/
