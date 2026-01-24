@@ -6,8 +6,9 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import helmet from 'helmet';
+import fs from 'fs'; // Added for debugging
 import * as db from './database.js';
-import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount, warmupCountCache, invalidateCountCache } from './database.js';
+import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount, warmupCountCache, invalidateCountCache, getComicsByOwner, getComicsByOwnerCount } from './database.js';
 import rateLimit from 'express-rate-limit';
 import { blockBots, validateApiParams, sanitizeHuggingFaceUrl } from './middleware/security.js';
 
@@ -150,24 +151,44 @@ app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/admin/login', authLimiter);
 
-// Admin JWT Auth Middleware
-const adminAuth = (req, res, next) => {
+// Management Auth Middleware (Supports both Legacy Admin and DB Users with role)
+const managementAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Admin authentication required' });
+        return res.status(401).json({ error: 'Authentication required' });
     }
 
     const token = authHeader.split(' ')[1];
+
+    // 1. Try Legacy Admin Token
     try {
         const decoded = jwt.verify(token, ADMIN_JWT_SECRET);
-        if (decoded.role !== 'admin') {
-            throw new Error('Not admin');
+        if (decoded.role === 'admin') {
+            req.user = { ...decoded, isLegacyAdmin: true, id: 'admin' }; // Mock ID for legacy admin
+            return next();
         }
-        req.admin = decoded;
-        next();
+    } catch (e) {
+        // Not a legacy admin token, try User token
+    }
+
+    // 2. Try User Token (for Group/Admin roles in DB)
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = db.getUserById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        if (user.role === 'admin' || user.role === 'group') {
+            req.user = user;
+            return next();
+        }
+
+        return res.status(403).json({ error: 'Insufficient permissions' });
     } catch (error) {
-        res.status(401).json({ error: 'Invalid or expired admin token' });
+        return res.status(401).json({ error: 'Invalid or expired token' });
     }
 };
 
@@ -222,11 +243,11 @@ app.post('/api/auth/register', async (req, res) => {
         const user = db.createUser({ username, email, password_hash });
 
         // Generate token
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
         res.status(201).json({
             success: true,
-            user: { id: user.id, username: user.username, email: user.email },
+            user: { id: user.id, username: user.username, email: user.email, role: user.role },
             token
         });
     } catch (error) {
@@ -253,11 +274,11 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user.id, email: user.email, role: user.role || 'user' }, JWT_SECRET, { expiresIn: '7d' });
 
         res.json({
             success: true,
-            user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url },
+            user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url, role: user.role || 'user' },
             token
         });
     } catch (error) {
@@ -569,9 +590,17 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // Create comic
-app.post('/api/admin/comics', adminAuth, (req, res) => {
+app.post('/api/admin/comics', managementAuth, (req, res) => {
     try {
-        const comic = db.createComic(req.body);
+        const comicData = { ...req.body };
+
+        // If not legacy admin and not db admin, assign owner
+        // (Legacy admin has id='admin', we can treat it as null owner or system owner)
+        if (!req.user.isLegacyAdmin && req.user.role !== 'admin') {
+            comicData.created_by = req.user.id;
+        }
+
+        const comic = db.createComic(comicData);
         invalidateGenreCache(); // Clear genre cache
         invalidateCountCache(); // Clear count cache
         res.status(201).json(comic);
@@ -581,12 +610,23 @@ app.post('/api/admin/comics', adminAuth, (req, res) => {
 });
 
 // Update comic
-app.put('/api/admin/comics/:id', adminAuth, (req, res) => {
+app.put('/api/admin/comics/:id', managementAuth, (req, res) => {
     try {
-        const comic = db.updateComic(req.params.id, req.body);
-        if (!comic) {
+        // Ownership check
+        const existing = db.getComicById(req.params.id);
+        if (!existing) {
             return res.status(404).json({ error: 'Comic not found' });
         }
+
+        // Allow if: Legacy Admin OR DB Admin OR Owner
+        const isOwner = !req.user.isLegacyAdmin && existing.created_by === req.user.id;
+        const isAdmin = req.user.isLegacyAdmin || req.user.role === 'admin';
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'You do not have permission to edit this comic' });
+        }
+
+        const comic = db.updateComic(req.params.id, req.body);
         invalidateGenreCache(); // Clear genre cache
         res.json({
             ...comic,
@@ -597,12 +637,54 @@ app.put('/api/admin/comics/:id', adminAuth, (req, res) => {
     }
 });
 
+// Get comics created by current user (for dashboard)
+app.get('/api/admin/comics/my', managementAuth, (req, res) => {
+    try {
+        const { limit = 20, offset = 0, search = '' } = req.query;
+
+        // If legacy admin or admin role, return ALL comics
+        if (req.user.isLegacyAdmin || req.user.role === 'admin') {
+            const comics = db.getAllComics(parseInt(limit), parseInt(offset), search);
+            const total = getTotalComicsCount(search);
+            return res.json({
+                data: comics.map(c => ({
+                    ...c,
+                    genres: JSON.parse(c.genres || '[]')
+                })),
+                total
+            });
+        }
+
+        // For Group/User, return only owned comics
+        const comics = db.getComicsByOwner(req.user.id, parseInt(limit), parseInt(offset), search);
+        const total = db.getComicsByOwnerCount(req.user.id, search);
+        res.json({
+            data: comics.map(c => ({
+                ...c,
+                genres: JSON.parse(c.genres || '[]')
+            })),
+            total
+        });
+    } catch (error) {
+        fs.appendFileSync('debug.log', `Error in my-comics: ${error.message}\n`);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Delete comic (and its images from Image Server)
-app.delete('/api/admin/comics/:id', adminAuth, async (req, res) => {
+app.delete('/api/admin/comics/:id', managementAuth, async (req, res) => {
     try {
         const comic = db.getComicById(req.params.id);
         if (!comic) {
             return res.status(404).json({ error: 'Comic not found' });
+        }
+
+        // Ownership check
+        const isOwner = !req.user.isLegacyAdmin && comic.created_by === req.user.id;
+        const isAdmin = req.user.isLegacyAdmin || req.user.role === 'admin';
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'You do not have permission to delete this comic' });
         }
 
         const token = req.headers.authorization?.split(' ')[1];
@@ -629,8 +711,21 @@ app.delete('/api/admin/comics/:id', adminAuth, async (req, res) => {
 });
 
 // Create chapter
-app.post('/api/admin/chapters', adminAuth, (req, res) => {
+app.post('/api/admin/chapters', managementAuth, (req, res) => {
     try {
+        // Check availability and ownership of the comic first
+        const comic = db.getComicById(req.body.comic_id);
+        if (!comic) {
+            return res.status(404).json({ error: 'Comic not found' });
+        }
+
+        const isOwner = !req.user.isLegacyAdmin && comic.created_by === req.user.id;
+        const isAdmin = req.user.isLegacyAdmin || req.user.role === 'admin';
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'You do not have permission to add chapters to this comic' });
+        }
+
         const chapter = db.createChapter(req.body);
         invalidateCountCache(); // Clear count cache (affects recent count)
         res.status(201).json(chapter);
@@ -640,8 +735,21 @@ app.post('/api/admin/chapters', adminAuth, (req, res) => {
 });
 
 // Update chapter
-app.put('/api/admin/chapters/:id', adminAuth, (req, res) => {
+app.put('/api/admin/chapters/:id', managementAuth, (req, res) => {
     try {
+        const existingChapter = db.getChapterById(req.params.id);
+        if (!existingChapter) {
+            return res.status(404).json({ error: 'Chapter not found' });
+        }
+
+        const comic = db.getComicById(existingChapter.comic_id);
+        const isOwner = !req.user.isLegacyAdmin && comic.created_by === req.user.id;
+        const isAdmin = req.user.isLegacyAdmin || req.user.role === 'admin';
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'You do not have permission to edit this chapter' });
+        }
+
         const chapter = db.updateChapter(req.params.id, req.body);
         if (!chapter) {
             return res.status(404).json({ error: 'Chapter not found' });
@@ -654,7 +762,7 @@ app.put('/api/admin/chapters/:id', adminAuth, (req, res) => {
 });
 
 // Delete chapter (and its images from Image Server)
-app.delete('/api/admin/chapters/:id', adminAuth, async (req, res) => {
+app.delete('/api/admin/chapters/:id', managementAuth, async (req, res) => {
     try {
         const chapter = db.getChapterById(req.params.id);
         if (!chapter) {
@@ -663,6 +771,13 @@ app.delete('/api/admin/chapters/:id', adminAuth, async (req, res) => {
 
         const comic = db.getComicById(chapter.comic_id);
         if (comic) {
+            const isOwner = !req.user.isLegacyAdmin && comic.created_by === req.user.id;
+            const isAdmin = req.user.isLegacyAdmin || req.user.role === 'admin';
+
+            if (!isAdmin && !isOwner) {
+                return res.status(403).json({ error: 'You do not have permission to delete this chapter' });
+            }
+
             const token = req.headers.authorization?.split(' ')[1];
             const comicSlug = slugify(comic.title);
             // Delete chapter images from Image Server

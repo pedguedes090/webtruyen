@@ -129,12 +129,29 @@ db.exec(`
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     avatar_url TEXT,
+    role TEXT DEFAULT 'user',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 `);
+
+// Migration: Add role column to users if not exists
+try {
+  db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
+  // Set existing admin user to admin role if needed, but for now default is user
+} catch (e) {
+  // Column exists
+}
+
+// Migration: Add created_by column to comics if not exists
+try {
+  db.exec("ALTER TABLE comics ADD COLUMN created_by INTEGER DEFAULT NULL");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_comics_created_by ON comics(created_by)");
+} catch (e) {
+  // Column exists
+}
 
 // Migration: Add slug column if not exists and generate slugs for existing comics
 try {
@@ -175,6 +192,30 @@ export const getAllComics = (limit = 20, offset = 0, search = '') => {
   return db.prepare(`
     SELECT * FROM comics ORDER BY updated_at DESC LIMIT ? OFFSET ?
   `).all(limit, offset);
+};
+
+export const getComicsByOwner = (userId, limit = 20, offset = 0, search = '') => {
+  if (search) {
+    return db.prepare(`
+      SELECT * FROM comics 
+      WHERE created_by = ? AND (title LIKE ? OR author LIKE ?)
+      ORDER BY updated_at DESC 
+      LIMIT ? OFFSET ?
+    `).all(userId, `%${search}%`, `%${search}%`, limit, offset);
+  }
+  return db.prepare(`
+    SELECT * FROM comics WHERE created_by = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?
+  `).all(userId, limit, offset);
+};
+
+export const getComicsByOwnerCount = (userId, search = '') => {
+  if (search) {
+    return db.prepare(`
+      SELECT COUNT(*) as count FROM comics 
+      WHERE created_by = ? AND (title LIKE ? OR author LIKE ?)
+    `).get(userId, `%${search}%`, `%${search}%`).count;
+  }
+  return db.prepare('SELECT COUNT(*) as count FROM comics WHERE created_by = ?').get(userId).count;
 };
 
 export const getComicById = (id) => {
@@ -350,8 +391,8 @@ export const getRecentComics = (limit = 12, offset = 0) => {
 export const createComic = (comic) => {
   const slug = slugify(comic.title);
   const stmt = db.prepare(`
-    INSERT INTO comics (title, slug, description, cover_url, author, status, genres)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO comics (title, slug, description, cover_url, author, status, genres, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = stmt.run(
     comic.title,
@@ -360,7 +401,8 @@ export const createComic = (comic) => {
     comic.cover_url || '',
     comic.author || '',
     comic.status || 'ongoing',
-    JSON.stringify(comic.genres || [])
+    JSON.stringify(comic.genres || []),
+    comic.created_by || null
   );
   return { id: result.lastInsertRowid, slug, ...comic };
 };
@@ -508,16 +550,17 @@ export const getAdjacentChapters = (comicId, chapterNumber) => {
 // User queries
 export const createUser = (user) => {
   const stmt = db.prepare(`
-    INSERT INTO users (username, email, password_hash, avatar_url)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO users (username, email, password_hash, avatar_url, role)
+    VALUES (?, ?, ?, ?, ?)
   `);
   const result = stmt.run(
     user.username,
     user.email,
     user.password_hash,
-    user.avatar_url || null
+    user.avatar_url || null,
+    user.role || 'user'
   );
-  return { id: result.lastInsertRowid, username: user.username, email: user.email };
+  return { id: result.lastInsertRowid, username: user.username, email: user.email, role: user.role || 'user' };
 };
 
 export const getUserByEmail = (email) => {
@@ -525,7 +568,7 @@ export const getUserByEmail = (email) => {
 };
 
 export const getUserById = (id) => {
-  return db.prepare('SELECT id, username, email, avatar_url, created_at FROM users WHERE id = ?').get(id);
+  return db.prepare('SELECT id, username, email, avatar_url, role, created_at FROM users WHERE id = ?').get(id);
 };
 
 export const getUserByUsername = (username) => {
