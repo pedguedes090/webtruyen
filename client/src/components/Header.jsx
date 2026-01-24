@@ -226,7 +226,8 @@ function Header() {
                             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-dark-border bg-primary dark:bg-[#5a3e85]">
                                 <Link to="/" onClick={() => setShowMobileMenu(false)} className="flex items-center gap-2 text-white font-bold text-lg">
                                     <BookOutlined className="text-xl" />
-                                    <span>TruyệnDex</span>
+                                    <span>Truyện</span>
+                                    <span>Launch</span>
                                 </Link>
                                 <button
                                     onClick={() => setShowMobileMenu(false)}
