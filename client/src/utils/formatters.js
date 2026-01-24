@@ -6,9 +6,24 @@
 export function formatTimeAgo(dateOrTimestamp) {
     if (!dateOrTimestamp) return '';
 
-    const date = typeof dateOrTimestamp === 'number'
-        ? new Date(dateOrTimestamp)
-        : new Date(dateOrTimestamp);
+    if (!dateOrTimestamp) return '';
+
+    let date;
+    if (typeof dateOrTimestamp === 'number') {
+        date = new Date(dateOrTimestamp);
+    } else {
+        // Assume server sends UTC strings like "2024-03-20 15:30:00"
+        // If it doesn't have 'Z' or timezone info, append 'Z' so browser treats it as UTC
+        let dateStr = String(dateOrTimestamp);
+        if (dateStr.includes(' ') && !dateStr.includes('T') && !dateStr.includes('Z')) {
+            // Convert "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM:SSZ"
+            dateStr = dateStr.replace(' ', 'T') + 'Z';
+        } else if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+            // For purely ISO-like strings without timezone
+            dateStr += 'Z';
+        }
+        date = new Date(dateStr);
+    }
 
     const now = new Date();
     const diffMs = now - date;
@@ -31,7 +46,17 @@ export function formatTimeAgo(dateOrTimestamp) {
  * @returns {string} Formatted date string
  */
 export function formatDate(dateString) {
-    const date = new Date(dateString);
+    if (!dateString) return '';
+
+    // Same UTC handling logic
+    let formattedStr = String(dateString);
+    if (formattedStr.includes(' ') && !formattedStr.includes('T') && !formattedStr.includes('Z')) {
+        formattedStr = formattedStr.replace(' ', 'T') + 'Z';
+    } else if (typeof dateString === 'string' && !formattedStr.endsWith('Z') && !formattedStr.includes('+')) {
+        formattedStr += 'Z';
+    }
+
+    const date = new Date(formattedStr);
     return date.toLocaleDateString('vi-VN');
 }
 
