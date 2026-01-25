@@ -395,7 +395,7 @@ function ImageManager({ onClose }) {
                                                 onClick={() => toggleSelect(file)}
                                             >
                                                 <img
-                                                    src={`${IMAGE_SERVER}${file.url}`}
+                                                    src={`${IMAGE_SERVER}${file.url}?t=${new Date(file.modified).getTime()}`}
                                                     alt={file.name}
                                                     className="w-full h-full object-cover"
                                                     loading="lazy"
