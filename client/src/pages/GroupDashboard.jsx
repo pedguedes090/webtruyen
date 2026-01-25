@@ -15,8 +15,6 @@ import {
     uploadChapterImages,
     getImageServerUrl,
     resolveImageUrl,
-    getImageServerUrl,
-    resolveImageUrl,
     slugify,
     getUserAuthHeader // Import the helper
 } from '../api';
