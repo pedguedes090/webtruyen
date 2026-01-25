@@ -1,12 +1,14 @@
 import axios from 'axios';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 // Get user favorites
 export const getFavorites = async (limit = 50, offset = 0) => {
     const token = localStorage.getItem('token');
     if (!token) return [];
 
     try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user/favorites`, {
+        const response = await axios.get(`${API_BASE}/api/user/favorites`, {
             headers: { Authorization: `Bearer ${token}` },
             params: { limit, offset }
         });
@@ -23,7 +25,7 @@ export const addFavorite = async (comicId) => {
     if (!token) return false;
 
     try {
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/user/favorites/${comicId}`, {}, {
+        const response = await axios.post(`${API_BASE}/api/user/favorites/${comicId}`, {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
@@ -39,7 +41,7 @@ export const removeFavorite = async (comicId) => {
     if (!token) return false;
 
     try {
-        const response = await axios.delete(`${import.meta.env.VITE_API_URL}/api/user/favorites/${comicId}`, {
+        const response = await axios.delete(`${API_BASE}/api/user/favorites/${comicId}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
@@ -55,7 +57,7 @@ export const checkFavorite = async (comicId) => {
     if (!token) return false;
 
     try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user/favorites/${comicId}/check`, {
+        const response = await axios.get(`${API_BASE}/api/user/favorites/${comicId}/check`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data.is_favorite;
@@ -71,7 +73,7 @@ export const getHistory = async (limit = 50, offset = 0) => {
     if (!token) return [];
 
     try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user/history`, {
+        const response = await axios.get(`${API_BASE}/api/user/history`, {
             headers: { Authorization: `Bearer ${token}` },
             params: { limit, offset }
         });
@@ -88,7 +90,7 @@ export const updateHistory = async (comicId, chapterId) => {
     if (!token) return false;
 
     try {
-        await axios.post(`${import.meta.env.VITE_API_URL}/api/user/history`,
+        await axios.post(`${API_BASE}/api/user/history`,
             { comic_id: comicId, chapter_id: chapterId },
             { headers: { Authorization: `Bearer ${token}` } }
         );
