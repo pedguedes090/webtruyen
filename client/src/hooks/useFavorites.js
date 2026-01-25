@@ -21,6 +21,7 @@ export function useFavorites() {
                     setFavorites(data.map(f => ({
                         id: f.id,
                         title: f.title,
+                        slug: f.slug,
                         cover_url: f.cover_url,
                         author: f.author,
                         addedAt: f.favorited_at
