@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getChapter, getChapterBySlugAndNumber, getComic, getComicBySlug, getChapters, resolveImageUrl, slugify } from '../api';
+import { updateHistory } from '../api/user';
+import { useAuth } from '../context/AuthContext';
 import CanvasImage from '../components/CanvasImage';
 import {
     LeftOutlined,
@@ -22,6 +24,7 @@ import {
 function ReaderPage() {
     const { id, slug, number } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth(); // Auth context
     const [chapter, setChapter] = useState(null);
     const [comic, setComic] = useState(null);
     const [allChapters, setAllChapters] = useState([]);
@@ -102,6 +105,7 @@ function ReaderPage() {
     }, [id, slug, number]);
 
     function saveToHistory(comicData, chapterData) {
+        // 1. Local Storage (always save for immediate access/offline)
         const history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
         const existing = history.findIndex(h => h.comicId === comicData.id);
 
@@ -120,6 +124,13 @@ function ReaderPage() {
         }
         history.unshift(entry);
         localStorage.setItem('readingHistory', JSON.stringify(history.slice(0, 50)));
+
+        // 2. DB Sync (if logged in)
+        if (user) {
+            // No debounce needed here because this function is only called ONCE per chapter load (in useEffect)
+            // If we needed to track scroll progress, we would need debounce. But for "viewed chapter", it's one-off.
+            updateHistory(comicData.id, chapterData.id);
+        }
     }
 
     const goToPrevChapter = useCallback(() => {

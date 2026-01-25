@@ -4,21 +4,57 @@ import { HistoryOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icon
 import { PLACEHOLDER_SMALL } from '../constants/placeholders';
 import { formatTimeAgo } from '../utils/formatters';
 import { resolveImageUrl } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { getHistory } from '../api/user';
 
 function HistoryPage() {
+    const { user } = useAuth();
     const [history, setHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const saved = JSON.parse(localStorage.getItem('readingHistory') || '[]');
-        setHistory(saved);
-    }, []);
+        async function loadHistory() {
+            setLoading(true);
+            if (user) {
+                try {
+                    const data = await getHistory(100);
+                    // Map API response to match localStorage format if needed, or unify formats
+                    // API returns: { comic_id, comic_title, comic_slug, cover_url, chapter_id, chapter_number, last_read_at }
+                    // UI expects: { comicId, comicTitle, comicSlug, coverUrl, chapterNumber, timestamp }
+                    const formatted = data.map(h => ({
+                        comicId: h.comic_id,
+                        comicTitle: h.comic_title,
+                        comicSlug: h.comic_slug,
+                        coverUrl: h.cover_url,
+                        chapterId: h.chapter_id,
+                        chapterNumber: h.chapter_number,
+                        timestamp: new Date(h.last_read_at).getTime()
+                    }));
+                    setHistory(formatted);
+                } catch (error) {
+                    console.error('Failed to load history', error);
+                }
+            } else {
+                const saved = JSON.parse(localStorage.getItem('readingHistory') || '[]');
+                setHistory(saved);
+            }
+            setLoading(false);
+        }
+        loadHistory();
+    }, [user]);
 
 
 
     function clearHistory() {
         if (window.confirm('Xóa toàn bộ lịch sử đọc?')) {
-            localStorage.removeItem('readingHistory');
-            setHistory([]);
+            if (user) {
+                // TODO: Add clear all API or just client side clear for now?
+                // For safety, maybe just alert unimplemented or do nothing for DB
+                alert('Tính năng xóa tất cả lịch sử chưa hỗ trợ cho tài khoản đăng nhập.');
+            } else {
+                localStorage.removeItem('readingHistory');
+                setHistory([]);
+            }
         }
     }
 
