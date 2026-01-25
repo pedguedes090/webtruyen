@@ -255,7 +255,7 @@ function GroupDashboard() {
                         { headers: getUserAuthHeader() } // Explicitly use User Token
                     );
                     // Only save relative path to database (not full URL)
-                    coverUrl = result.url;
+                    coverUrl = result.url + `?t=${Date.now()}`;
                 } catch (err) {
                     showToast('Lỗi upload ảnh bìa: ' + err.message, 'error');
                     setUploading(false);

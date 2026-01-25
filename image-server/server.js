@@ -173,6 +173,15 @@ app.post('/upload/cover', managementAuth, upload.single('cover'), async (req, re
         const filename = `${slug}.${ext}`;
         const outputPath = path.join(UPLOAD_DIR, 'covers', filename);
 
+        // Delete existing file before overwriting (to avoid Windows file lock or cache issues)
+        if (fs.existsSync(outputPath)) {
+            try {
+                fs.unlinkSync(outputPath);
+            } catch (err) {
+                console.warn('Failed to delete existing cover:', err.message);
+            }
+        }
+
         await processImage(req.file.buffer, outputPath);
 
         const imageUrl = `/images/covers/${filename}`;
