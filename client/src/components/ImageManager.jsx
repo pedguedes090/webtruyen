@@ -23,7 +23,6 @@ import {
     uploadToFolder,
     createFolder,
     getImageServerUrl,
-    getImageServerUrl,
     getImageServerStats,
     getUserAuthHeader // Import helper
 } from '../api';
