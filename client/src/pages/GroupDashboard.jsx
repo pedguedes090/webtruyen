@@ -560,7 +560,7 @@ function GroupDashboard() {
                             <div className="flex gap-3">
                                 <div className="flex-1">
                                     <input
-                                        type="url"
+                                        type="text"
                                         className="w-full px-3 py-2 bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border rounded text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-primary transition-all"
                                         placeholder="URL ảnh bìa hoặc upload bên dưới"
                                         value={comicForm.cover_url}
@@ -598,7 +598,7 @@ function GroupDashboard() {
                                 </div>
                                 {(coverPreview || comicForm.cover_url) && (
                                     <img
-                                        src={coverPreview || comicForm.cover_url}
+                                        src={coverPreview || resolveImageUrl(comicForm.cover_url)}
                                         alt="Preview"
                                         className="w-16 h-20 object-cover rounded border border-gray-200 dark:border-dark-border"
                                     />
