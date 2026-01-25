@@ -15,7 +15,10 @@ import {
     uploadChapterImages,
     getImageServerUrl,
     resolveImageUrl,
-    slugify
+    getImageServerUrl,
+    resolveImageUrl,
+    slugify,
+    getUserAuthHeader // Import the helper
 } from '../api';
 import {
     BookOutlined,
@@ -250,7 +253,8 @@ function GroupDashboard() {
                     const result = await uploadCoverImage(
                         coverFile,
                         slugify(comicForm.title),
-                        setUploadProgress
+                        setUploadProgress,
+                        { headers: getUserAuthHeader() } // Explicitly use User Token
                     );
                     // Only save relative path to database (not full URL)
                     coverUrl = result.url;
@@ -265,7 +269,7 @@ function GroupDashboard() {
             const comicData = { ...comicForm, cover_url: coverUrl, genres };
 
             if (editingComic) {
-                const updated = await updateComic(editingComic.id, comicData);
+                const updated = await updateComic(editingComic.id, comicData, { headers: getUserAuthHeader() });
                 // Optimally update local state
                 setComics(prev => prev.map(c => c.id === updated.id ? updated : c));
                 // If the currently selected comic was updated, update it too
@@ -274,7 +278,7 @@ function GroupDashboard() {
                 }
                 showToast('Cập nhật truyện thành công!');
             } else {
-                const created = await createComic(comicData);
+                const created = await createComic(comicData, { headers: getUserAuthHeader() });
                 setComics(prev => [created, ...prev]);
                 showToast('Thêm truyện thành công!');
             }
@@ -308,7 +312,7 @@ function GroupDashboard() {
     const handleDeleteComic = async (id) => {
         if (!window.confirm('Bạn có chắc chắn muốn xóa truyện này?')) return;
         try {
-            await deleteComic(id);
+            await deleteComic(id, { headers: getUserAuthHeader() });
             setComics(prev => prev.filter(c => c.id !== id));
             if (selectedComic?.id === id) {
                 setSelectedComic(null);
@@ -352,7 +356,8 @@ function GroupDashboard() {
                             server.files,
                             slugify(selectedComic.title),
                             chapterForm.chapter_number,
-                            setUploadProgress
+                            setUploadProgress,
+                            { headers: getUserAuthHeader() } // Explicitly use User Token
                         );
                         imageUrls = result.urls;
                     } catch (err) {
@@ -387,14 +392,14 @@ function GroupDashboard() {
                 resultChapter = await updateChapter(editingChapter.id, {
                     ...chapterData,
                     image_urls: processedServers
-                });
+                }, { headers: getUserAuthHeader() });
                 setChapters(prev => prev.map(c => c.id === resultChapter.id ? resultChapter : c));
                 showToast('Cập nhật chương thành công!');
             } else {
                 resultChapter = await createChapter({
                     ...chapterData,
                     image_urls: processedServers
-                });
+                }, { headers: getUserAuthHeader() });
                 setChapters(prev => [...prev, resultChapter]);
                 showToast('Thêm chương thành công!');
             }
@@ -459,7 +464,7 @@ function GroupDashboard() {
     const handleDeleteChapter = async (id) => {
         if (!window.confirm('Bạn có chắc chắn muốn xóa chương này?')) return;
         try {
-            await deleteChapter(id);
+            await deleteChapter(id, { headers: getUserAuthHeader() });
             setChapters(prev => prev.filter(c => c.id !== id));
             showToast('Xóa chương thành công!');
             if (editingChapter?.id === id) {
@@ -472,6 +477,7 @@ function GroupDashboard() {
             showToast('Lỗi xóa chương: ' + error.message, 'error');
         }
     };
+
 
     // Dashboard
     if (authLoading || !isAuthenticated) {

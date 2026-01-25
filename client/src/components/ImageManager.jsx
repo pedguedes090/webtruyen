@@ -23,7 +23,9 @@ import {
     uploadToFolder,
     createFolder,
     getImageServerUrl,
-    getImageServerStats
+    getImageServerUrl,
+    getImageServerStats,
+    getUserAuthHeader // Import helper
 } from '../api';
 
 function ImageManager({ onClose }) {
@@ -60,7 +62,7 @@ function ImageManager({ onClose }) {
         setLoading(true);
         setSelectedItems([]);
         try {
-            const data = await browseImages(path);
+            const data = await browseImages(path, { headers: getUserAuthHeader() });
             setFolders(data.folders || []);
             setFiles(data.files || []);
         } catch (error) {
@@ -72,7 +74,7 @@ function ImageManager({ onClose }) {
 
     const loadStats = async () => {
         try {
-            const data = await getImageServerStats();
+            const data = await getImageServerStats({ headers: getUserAuthHeader() });
             setStats(data);
         } catch (error) {
             console.error('Failed to load stats:', error);
@@ -109,9 +111,9 @@ function ImageManager({ onClose }) {
             for (const itemPath of selectedItems) {
                 const item = [...folders, ...files].find(i => i.path === itemPath);
                 if (item?.type === 'folder') {
-                    await deleteFolder(itemPath);
+                    await deleteFolder(itemPath, { headers: getUserAuthHeader() });
                 } else {
-                    await deleteImage(itemPath);
+                    await deleteImage(itemPath, { headers: getUserAuthHeader() });
                 }
             }
             showToast(`Đã xóa ${selectedItems.length} mục`);
@@ -132,7 +134,7 @@ function ImageManager({ onClose }) {
         if (!renaming || !newName.trim()) return;
 
         try {
-            await renameItem(renaming, newName.trim());
+            await renameItem(renaming, newName.trim(), { headers: getUserAuthHeader() });
             showToast('Đã đổi tên thành công');
             setRenaming(null);
             loadFolder(currentPath);
@@ -148,7 +150,7 @@ function ImageManager({ onClose }) {
             const folderPath = currentPath === '/'
                 ? `/${newFolderName.trim()}`
                 : `${currentPath}/${newFolderName.trim()}`;
-            await createFolder(folderPath);
+            await createFolder(folderPath, { headers: getUserAuthHeader() });
             showToast('Đã tạo thư mục');
             setCreating(false);
             setNewFolderName('');
@@ -164,7 +166,7 @@ function ImageManager({ onClose }) {
         setUploading(true);
         setUploadProgress(0);
         try {
-            await uploadToFolder(Array.from(fileList), currentPath, setUploadProgress);
+            await uploadToFolder(Array.from(fileList), currentPath, setUploadProgress, { headers: getUserAuthHeader() });
             showToast(`Đã upload ${fileList.length} file`);
             loadFolder(currentPath);
             loadStats();
@@ -334,8 +336,8 @@ function ImageManager({ onClose }) {
                                             <div
                                                 key={folder.path}
                                                 className={`group relative p-3 rounded border cursor-pointer transition-all ${selectedItems.includes(folder.path)
-                                                        ? 'bg-primary/10 border-primary'
-                                                        : 'bg-gray-50 dark:bg-dark-secondary border-gray-200 dark:border-dark-border hover:border-primary/50'
+                                                    ? 'bg-primary/10 border-primary'
+                                                    : 'bg-gray-50 dark:bg-dark-secondary border-gray-200 dark:border-dark-border hover:border-primary/50'
                                                     }`}
                                                 onClick={() => navigateTo(folder.path)}
                                             >
@@ -388,8 +390,8 @@ function ImageManager({ onClose }) {
                                             <div
                                                 key={file.path}
                                                 className={`group relative aspect-square rounded border overflow-hidden cursor-pointer transition-all ${selectedItems.includes(file.path)
-                                                        ? 'ring-2 ring-primary'
-                                                        : 'border-gray-200 dark:border-dark-border hover:border-primary/50'
+                                                    ? 'ring-2 ring-primary'
+                                                    : 'border-gray-200 dark:border-dark-border hover:border-primary/50'
                                                     }`}
                                                 onClick={() => toggleSelect(file)}
                                             >
