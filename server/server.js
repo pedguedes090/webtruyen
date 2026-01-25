@@ -74,15 +74,6 @@ const authLimiter = rateLimit({
     validate: { xForwardedForHeader: false }, // Skip X-Forwarded-For validation
 });
 
-// Stricter Rate Limit for User Actions (Favorites, History updates)
-// Prevent spamming likes/history
-const userActionLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 60, // limit each IP to 60 requests per minute
-    message: { error: 'Too many requests, please slow down' },
-    validate: { xForwardedForHeader: false },
-});
-
 // Security Headers with Helmet
 app.use(helmet({
     contentSecurityPolicy: {
@@ -158,11 +149,7 @@ app.use(sanitizeHuggingFaceUrl);
 // Apply rate limits
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
-app.use('/api/', apiLimiter);
-app.use('/api/auth/login', authLimiter);
 app.use('/api/admin/login', authLimiter);
-app.use('/api/user/favorites', userActionLimiter);
-app.use('/api/user/history', userActionLimiter);
 
 // Management Auth Middleware (Supports both Legacy Admin and DB Users with role)
 const managementAuth = (req, res, next) => {
@@ -307,74 +294,6 @@ app.get('/api/auth/me', userAuth, (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         res.json(user);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============== USER ACTION ROUTES ==============
-
-// Get user favorites
-app.get('/api/user/favorites', userAuth, (req, res) => {
-    try {
-        const { limit = 50, offset = 0 } = req.query;
-        const favorites = db.getFavorites(req.user.id, parseInt(limit), parseInt(offset));
-        res.json(favorites);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Add favorite
-app.post('/api/user/favorites/:comicId', userAuth, (req, res) => {
-    try {
-        const success = db.addFavorite(req.user.id, req.params.comicId);
-        res.json({ success, is_favorite: true });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Remove favorite
-app.delete('/api/user/favorites/:comicId', userAuth, (req, res) => {
-    try {
-        db.removeFavorite(req.user.id, req.params.comicId);
-        res.json({ success: true, is_favorite: false });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Check if favorite
-app.get('/api/user/favorites/:comicId/check', userAuth, (req, res) => {
-    try {
-        const isFavorite = db.isFavorite(req.user.id, req.params.comicId);
-        res.json({ is_favorite: isFavorite });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get reading history
-app.get('/api/user/history', userAuth, (req, res) => {
-    try {
-        const { limit = 50, offset = 0 } = req.query;
-        const history = db.getHistory(req.user.id, parseInt(limit), parseInt(offset));
-        res.json(history);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update reading history
-app.post('/api/user/history', userAuth, (req, res) => {
-    try {
-        const { comic_id, chapter_id } = req.body;
-        if (!comic_id || !chapter_id) {
-            return res.status(400).json({ error: 'Missing comic_id or chapter_id' });
-        }
-        db.updateHistory(req.user.id, comic_id, chapter_id);
-        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

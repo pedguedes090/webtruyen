@@ -135,31 +135,6 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-
-  CREATE TABLE IF NOT EXISTS favorites (
-    user_id INTEGER NOT NULL,
-    comic_id INTEGER NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, comic_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
-
-  CREATE TABLE IF NOT EXISTS reading_history (
-    user_id INTEGER NOT NULL,
-    comic_id INTEGER NOT NULL,
-    chapter_id INTEGER NOT NULL,
-    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, comic_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
-    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_reading_history_user ON reading_history(user_id);
-  CREATE INDEX IF NOT EXISTS idx_reading_history_updated ON reading_history(last_read_at DESC);
 `);
 
 // Migration: Add role column to users if not exists
@@ -647,70 +622,6 @@ export const getComicsByGenre = (genre, limit = 20, offset = 0) => {
     LIMIT ? OFFSET ?
   `).all(`%"${genre}"%`, limit, offset);
 };
-
-// ============== FAVORITES ==============
-
-export const addFavorite = (userId, comicId) => {
-  try {
-    db.prepare('INSERT OR IGNORE INTO favorites (user_id, comic_id) VALUES (?, ?)').run(userId, comicId);
-    return true;
-  } catch (e) {
-    console.error('Add favorite error:', e);
-    return false;
-  }
-};
-
-export const removeFavorite = (userId, comicId) => {
-  db.prepare('DELETE FROM favorites WHERE user_id = ? AND comic_id = ?').run(userId, comicId);
-};
-
-export const getFavorites = (userId, limit = 50, offset = 0) => {
-  return db.prepare(`
-    SELECT c.*, f.created_at as favorited_at 
-    FROM comics c
-    JOIN favorites f ON c.id = f.comic_id
-    WHERE f.user_id = ?
-    ORDER BY f.created_at DESC
-    LIMIT ? OFFSET ?
-  `).all(userId, limit, offset);
-};
-
-export const isFavorite = (userId, comicId) => {
-  const result = db.prepare('SELECT 1 FROM favorites WHERE user_id = ? AND comic_id = ?').get(userId, comicId);
-  return !!result;
-};
-
-// ============== READING HISTORY ==============
-
-export const updateHistory = (userId, comicId, chapterId) => {
-  // Use INSERT OR REPLACE to keep only the latest chapter per comic per user
-  db.prepare(`
-    INSERT OR REPLACE INTO reading_history (user_id, comic_id, chapter_id, last_read_at)
-    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-  `).run(userId, comicId, chapterId);
-};
-
-export const getHistory = (userId, limit = 50, offset = 0) => {
-  const history = db.prepare(`
-    SELECT 
-      c.id as comic_id, c.title as comic_title, c.slug as comic_slug, c.cover_url,
-      ch.id as chapter_id, ch.chapter_number, ch.title as chapter_title,
-      rh.last_read_at
-    FROM reading_history rh
-    JOIN comics c ON rh.comic_id = c.id
-    JOIN chapters ch ON rh.chapter_id = ch.id
-    WHERE rh.user_id = ?
-    ORDER BY rh.last_read_at DESC
-    LIMIT ? OFFSET ?
-  `).all(userId, limit, offset);
-
-  return history;
-};
-
-export const removeHistory = (userId, comicId) => {
-  db.prepare('DELETE FROM reading_history WHERE user_id = ? AND comic_id = ?').run(userId, comicId);
-};
-
 
 export default db;
 
