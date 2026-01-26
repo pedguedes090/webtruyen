@@ -1,31 +1,25 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HistoryOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
+import { HistoryOutlined, DeleteOutlined } from '@ant-design/icons';
 import { PLACEHOLDER_SMALL } from '../constants/placeholders';
 import { formatTimeAgo } from '../utils/formatters';
 import { resolveImageUrl } from '../api';
+import { useHistory } from '../hooks/useHistory';
 
 function HistoryPage() {
-    const [history, setHistory] = useState([]);
+    const { history, loading, removeFromHistory, clearHistory } = useHistory();
 
-    useEffect(() => {
-        const saved = JSON.parse(localStorage.getItem('readingHistory') || '[]');
-        setHistory(saved);
-    }, []);
-
-
-
-    function clearHistory() {
+    function handleClearHistory() {
         if (window.confirm('Xóa toàn bộ lịch sử đọc?')) {
-            localStorage.removeItem('readingHistory');
-            setHistory([]);
+            clearHistory();
         }
     }
 
-    function removeItem(comicId) {
-        const updated = history.filter(h => h.comicId !== comicId);
-        localStorage.setItem('readingHistory', JSON.stringify(updated));
-        setHistory(updated);
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="w-10 h-10 border-4 border-gray-200 dark:border-dark-tertiary border-t-primary rounded-full animate-spin" />
+            </div>
+        );
     }
 
     return (
@@ -39,7 +33,7 @@ function HistoryPage() {
                     </div>
                     {history.length > 0 && (
                         <button
-                            onClick={clearHistory}
+                            onClick={handleClearHistory}
                             className="px-3 py-1 text-xs bg-gray-200 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:text-red-400 transition-colors flex items-center gap-1"
                         >
                             <DeleteOutlined /> Xóa tất cả
@@ -85,7 +79,7 @@ function HistoryPage() {
 
                                 {/* Remove button */}
                                 <button
-                                    onClick={() => removeItem(item.comicId)}
+                                    onClick={() => removeFromHistory(item.comicId)}
                                     className="p-1 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
                                     title="Xóa khỏi lịch sử"
                                 >

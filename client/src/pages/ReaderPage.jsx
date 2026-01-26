@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getChapter, getChapterBySlugAndNumber, getComic, getComicBySlug, getChapters, resolveImageUrl, slugify } from '../api';
+import { useHistory } from '../hooks/useHistory';
 import CanvasImage from '../components/CanvasImage';
 import {
     LeftOutlined,
@@ -22,6 +23,8 @@ import {
 function ReaderPage() {
     const { id, slug, number } = useParams();
     const navigate = useNavigate();
+    const { addToHistory } = useHistory();
+    const historyRef = useRef(false); // Prevent double-saving
     const [chapter, setChapter] = useState(null);
     const [comic, setComic] = useState(null);
     const [allChapters, setAllChapters] = useState([]);
@@ -87,7 +90,11 @@ function ReaderPage() {
                     }
                 }
 
-                saveToHistory(comicData, chapterData);
+                // Save to history (with deduplication)
+                if (!historyRef.current) {
+                    historyRef.current = true;
+                    addToHistory(comicData, chapterData);
+                }
             } catch (error) {
                 console.error('Error fetching chapter:', error);
             } finally {
@@ -99,28 +106,8 @@ function ReaderPage() {
         fetchData();
         window.scrollTo(0, 0);
         setReadingProgress(0);
-    }, [id, slug, number]);
-
-    function saveToHistory(comicData, chapterData) {
-        const history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
-        const existing = history.findIndex(h => h.comicId === comicData.id);
-
-        const entry = {
-            comicId: comicData.id,
-            comicSlug: comicData.slug || slugify(comicData.title),
-            comicTitle: comicData.title,
-            coverUrl: comicData.cover_url,
-            chapterId: chapterData.id,
-            chapterNumber: chapterData.chapter_number,
-            timestamp: Date.now()
-        };
-
-        if (existing !== -1) {
-            history.splice(existing, 1);
-        }
-        history.unshift(entry);
-        localStorage.setItem('readingHistory', JSON.stringify(history.slice(0, 50)));
-    }
+        historyRef.current = false; // Reset for new chapter
+    }, [id, slug, number, addToHistory]);
 
     const goToPrevChapter = useCallback(() => {
         if (chapter?.prev_chapter && comic) {

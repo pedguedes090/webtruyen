@@ -58,6 +58,56 @@ export const getMe = async () => {
     return response.data;
 };
 
+// ============== USER DATA API ==============
+
+// History
+export const getUserHistory = async (limit = 50) => {
+    const response = await api.get(`/user/history?limit=${limit}`);
+    return response.data;
+};
+
+export const addToHistoryAPI = async (comicId, chapterNumber) => {
+    const response = await api.post('/user/history', { comic_id: comicId, chapter_number: chapterNumber });
+    return response.data;
+};
+
+export const removeFromHistoryAPI = async (comicId) => {
+    const response = await api.delete(`/user/history/${comicId}`);
+    return response.data;
+};
+
+export const clearHistoryAPI = async () => {
+    const response = await api.delete('/user/history');
+    return response.data;
+};
+
+// Follows
+export const getUserFollows = async () => {
+    const response = await api.get('/user/follows');
+    return response.data;
+};
+
+export const followComicAPI = async (comicId) => {
+    const response = await api.post(`/user/follows/${comicId}`);
+    return response.data;
+};
+
+export const unfollowComicAPI = async (comicId) => {
+    const response = await api.delete(`/user/follows/${comicId}`);
+    return response.data;
+};
+
+export const checkFollowingAPI = async (comicId) => {
+    const response = await api.get(`/user/follows/${comicId}/check`);
+    return response.data;
+};
+
+// Sync local data with server
+export const syncUserDataAPI = async (history, follows) => {
+    const response = await api.post('/user/sync', { history, follows });
+    return response.data;
+};
+
 // ============== PUBLIC API ==============
 
 export const getComics = async (limit = 20, offset = 0, search = '', sort = '') => {

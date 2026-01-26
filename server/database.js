@@ -135,6 +135,36 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+  -- User reading history
+  CREATE TABLE IF NOT EXISTS user_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    comic_id INTEGER NOT NULL,
+    chapter_number REAL,
+    read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
+    UNIQUE(user_id, comic_id)
+  );
+
+  -- User following comics
+  CREATE TABLE IF NOT EXISTS user_follows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    comic_id INTEGER NOT NULL,
+    followed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
+    UNIQUE(user_id, comic_id)
+  );
+
+  -- Indexes for user_history
+  CREATE INDEX IF NOT EXISTS idx_user_history_user ON user_history(user_id);
+  CREATE INDEX IF NOT EXISTS idx_user_history_read ON user_history(read_at DESC);
+
+  -- Indexes for user_follows
+  CREATE INDEX IF NOT EXISTS idx_user_follows_user ON user_follows(user_id);
 `);
 
 // Migration: Add role column to users if not exists
@@ -623,5 +653,109 @@ export const getComicsByGenre = (genre, limit = 20, offset = 0) => {
   `).all(`%"${genre}"%`, limit, offset);
 };
 
+// ============== USER HISTORY ==============
+
+// Get user reading history with comic details
+export const getUserHistory = (userId, limit = 50) => {
+  return db.prepare(`
+    SELECT uh.*, c.title, c.slug, c.cover_url, c.author
+    FROM user_history uh
+    JOIN comics c ON uh.comic_id = c.id
+    WHERE uh.user_id = ?
+    ORDER BY uh.read_at DESC
+    LIMIT ?
+  `).all(userId, limit);
+};
+
+// Add or update reading history
+export const addToHistory = (userId, comicId, chapterNumber) => {
+  const stmt = db.prepare(`
+    INSERT INTO user_history (user_id, comic_id, chapter_number, read_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id, comic_id) DO UPDATE SET
+      chapter_number = excluded.chapter_number,
+      read_at = CURRENT_TIMESTAMP
+  `);
+  return stmt.run(userId, comicId, chapterNumber);
+};
+
+// Remove from history
+export const removeFromHistory = (userId, comicId) => {
+  return db.prepare('DELETE FROM user_history WHERE user_id = ? AND comic_id = ?').run(userId, comicId);
+};
+
+// Clear all history for user
+export const clearHistory = (userId) => {
+  return db.prepare('DELETE FROM user_history WHERE user_id = ?').run(userId);
+};
+
+// ============== USER FOLLOWS ==============
+
+// Get user's followed comics with details
+export const getUserFollows = (userId) => {
+  return db.prepare(`
+    SELECT uf.*, c.title, c.slug, c.cover_url, c.author, c.status
+    FROM user_follows uf
+    JOIN comics c ON uf.comic_id = c.id
+    WHERE uf.user_id = ?
+    ORDER BY uf.followed_at DESC
+  `).all(userId);
+};
+
+// Follow a comic
+export const followComic = (userId, comicId) => {
+  const stmt = db.prepare(`
+    INSERT OR IGNORE INTO user_follows (user_id, comic_id, followed_at)
+    VALUES (?, ?, CURRENT_TIMESTAMP)
+  `);
+  return stmt.run(userId, comicId);
+};
+
+// Unfollow a comic
+export const unfollowComic = (userId, comicId) => {
+  return db.prepare('DELETE FROM user_follows WHERE user_id = ? AND comic_id = ?').run(userId, comicId);
+};
+
+// Check if user is following a comic
+export const isFollowingComic = (userId, comicId) => {
+  const result = db.prepare('SELECT 1 FROM user_follows WHERE user_id = ? AND comic_id = ?').get(userId, comicId);
+  return !!result;
+};
+
+// Batch sync: merge local data with server data
+export const syncUserData = (userId, localHistory, localFollows) => {
+  const result = { history: [], follows: [] };
+
+  db.transaction(() => {
+    // Sync history
+    for (const item of localHistory) {
+      if (item.comicId) {
+        // Check if comic exists
+        const comic = db.prepare('SELECT id FROM comics WHERE id = ?').get(item.comicId);
+        if (comic) {
+          addToHistory(userId, item.comicId, item.chapterNumber || 1);
+        }
+      }
+    }
+
+    // Sync follows
+    for (const item of localFollows) {
+      if (item.id) {
+        const comic = db.prepare('SELECT id FROM comics WHERE id = ?').get(item.id);
+        if (comic) {
+          followComic(userId, item.id);
+        }
+      }
+    }
+  })();
+
+  // Return merged data
+  result.history = getUserHistory(userId);
+  result.follows = getUserFollows(userId);
+
+  return result;
+};
+
 export default db;
+
 

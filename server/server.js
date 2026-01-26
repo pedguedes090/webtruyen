@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 import helmet from 'helmet';
 import fs from 'fs'; // Added for debugging
 import * as db from './database.js';
-import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount, warmupCountCache, invalidateCountCache, getComicsByOwner, getComicsByOwnerCount } from './database.js';
+import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount, warmupCountCache, invalidateCountCache, getComicsByOwner, getComicsByOwnerCount, getUserHistory, addToHistory, removeFromHistory, clearHistory, getUserFollows, followComic, unfollowComic, isFollowingComic, syncUserData } from './database.js';
 import rateLimit from 'express-rate-limit';
 import { blockBots, validateApiParams, sanitizeHuggingFaceUrl } from './middleware/security.js';
 
@@ -561,6 +561,116 @@ app.post('/api/huggingface/fetch-images', async (req, res) => {
             count: imageFiles.length,
             image_urls: imageFiles
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============== USER DATA ROUTES (requires userAuth) ==============
+
+// Get user's reading history
+app.get('/api/user/history', userAuth, (req, res) => {
+    try {
+        const { limit = 50 } = req.query;
+        const history = getUserHistory(req.user.id, parseInt(limit));
+        res.json({
+            data: history,
+            total: history.length
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add to reading history
+app.post('/api/user/history', userAuth, (req, res) => {
+    try {
+        const { comic_id, chapter_number } = req.body;
+        if (!comic_id) {
+            return res.status(400).json({ error: 'comic_id is required' });
+        }
+        addToHistory(req.user.id, comic_id, chapter_number || 1);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Remove from history
+app.delete('/api/user/history/:comicId', userAuth, (req, res) => {
+    try {
+        removeFromHistory(req.user.id, parseInt(req.params.comicId));
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Clear all history
+app.delete('/api/user/history', userAuth, (req, res) => {
+    try {
+        clearHistory(req.user.id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get user's followed comics
+app.get('/api/user/follows', userAuth, (req, res) => {
+    try {
+        const follows = getUserFollows(req.user.id);
+        res.json({
+            data: follows,
+            total: follows.length
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Follow a comic
+app.post('/api/user/follows/:comicId', userAuth, (req, res) => {
+    try {
+        const comicId = parseInt(req.params.comicId);
+        // Check if comic exists
+        const comic = db.getComicById(comicId);
+        if (!comic) {
+            return res.status(404).json({ error: 'Comic not found' });
+        }
+        followComic(req.user.id, comicId);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Unfollow a comic
+app.delete('/api/user/follows/:comicId', userAuth, (req, res) => {
+    try {
+        unfollowComic(req.user.id, parseInt(req.params.comicId));
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Check if following a comic
+app.get('/api/user/follows/:comicId/check', userAuth, (req, res) => {
+    try {
+        const following = isFollowingComic(req.user.id, parseInt(req.params.comicId));
+        res.json({ following });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Sync local data with server (called on login)
+app.post('/api/user/sync', userAuth, (req, res) => {
+    try {
+        const { history = [], follows = [] } = req.body;
+        const result = syncUserData(req.user.id, history, follows);
+        res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

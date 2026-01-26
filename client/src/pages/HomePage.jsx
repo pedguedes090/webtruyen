@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ComicCard, ComicCardWithChapters } from '../components/ComicCard';
 import RankingList from '../components/RankingList';
 import { getRecentComics, getTopComics, getFeaturedComics, resolveImageUrl, prefetchRecentComics } from '../api';
+import { useHistory } from '../hooks/useHistory';
 import { FireOutlined, SyncOutlined, HistoryOutlined, TrophyOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { PLACEHOLDER_SMALL } from '../constants/placeholders';
 
@@ -14,7 +15,7 @@ function HomePage() {
     const [featuredComics, setFeaturedComics] = useState([]);
     const [recentComics, setRecentComics] = useState([]);
     const [topComics, setTopComics] = useState([]);
-    const [readingHistory, setReadingHistory] = useState([]);
+    const { history: readingHistory } = useHistory();
     const [loading, setLoading] = useState(true);
     const [totalCount, setTotalCount] = useState(0);
     const LIMIT = 12;
@@ -65,10 +66,6 @@ function HomePage() {
             }
         };
         fetchData();
-
-        // Load reading history from localStorage
-        const saved = JSON.parse(localStorage.getItem('readingHistory') || '[]');
-        setReadingHistory(saved.slice(0, 5));
 
         // Scroll to recent section when page changes (not on initial load)
         if (page > 1) {
@@ -262,8 +259,8 @@ function HomePage() {
                                 <Link to="/history" className="text-xs text-gray-500 hover:text-primary">Xem tất cả</Link>
                             </div>
                             <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-                                {readingHistory.length > 0 ? (
-                                    readingHistory.map(item => (
+                                {readingHistory.slice(0, 5).length > 0 ? (
+                                    readingHistory.slice(0, 5).map(item => (
                                         <Link key={item.comicId} to={`/truyen/${item.comicSlug}`} className="flex-shrink-0 w-14 sm:w-16">
                                             <img
                                                 src={resolveImageUrl(item.coverUrl) || PLACEHOLDER_SMALL}
@@ -292,8 +289,8 @@ function HomePage() {
                             <Link to="/history" className="text-xs text-gray-500 hover:text-primary">Xem tất cả</Link>
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-2">
-                            {readingHistory.length > 0 ? (
-                                readingHistory.map(item => (
+                            {readingHistory.slice(0, 5).length > 0 ? (
+                                readingHistory.slice(0, 5).map(item => (
                                     <Link key={item.comicId} to={`/truyen/${item.comicSlug}`} className="flex-shrink-0 w-12">
                                         <img
                                             src={resolveImageUrl(item.coverUrl) || PLACEHOLDER_SMALL}
