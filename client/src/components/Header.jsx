@@ -80,10 +80,11 @@ function Header() {
                             <input
                                 type="text"
                                 name="search"
-                                className="w-full px-3 sm:px-4 py-1.5 pr-10 bg-white rounded text-sm text-gray-800 outline-none"
-                                placeholder="Tìm truyện..."
+                                autoComplete="off"
+                                className="w-full px-3 sm:px-4 py-1.5 pr-10 bg-white rounded text-sm text-gray-800 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                                placeholder="Tìm truyện…"
                             />
-                            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary">
+                            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary" aria-label="Tìm kiếm">
                                 <SearchOutlined />
                             </button>
                         </div>
@@ -96,7 +97,7 @@ function Header() {
                             <SearchOutlined />
                         </Link>
 
-                        <button onClick={toggleTheme} className="hover:text-yellow-300 transition-colors text-lg" title="Chuyển theme">
+                        <button onClick={toggleTheme} className="hover:text-yellow-300 transition-colors text-lg" title="Chuyển theme" aria-label={theme === 'dark' ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}>
                             {theme === 'dark' ? <SunOutlined /> : <MoonOutlined />}
                         </button>
 
@@ -232,6 +233,7 @@ function Header() {
                                 <button
                                     onClick={() => setShowMobileMenu(false)}
                                     className="text-white text-xl p-1 hover:text-yellow-300 transition-colors"
+                                    aria-label="Đóng menu"
                                 >
                                     <CloseOutlined />
                                 </button>
@@ -243,10 +245,11 @@ function Header() {
                                     <input
                                         type="text"
                                         name="search"
-                                        className="w-full px-4 py-2.5 pr-10 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border rounded-lg text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-primary"
-                                        placeholder="Tìm truyện..."
+                                        autoComplete="off"
+                                        className="w-full px-4 py-2.5 pr-10 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border rounded-lg text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary"
+                                        placeholder="Tìm truyện…"
                                     />
-                                    <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary">
+                                    <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary" aria-label="Tìm kiếm">
                                         <SearchOutlined />
                                     </button>
                                 </div>

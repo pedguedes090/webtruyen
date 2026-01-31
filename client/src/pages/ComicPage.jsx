@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { getComic, getComicBySlug, getChapters, resolveImageUrl, slugify } from '../api';
 import { useFavorites } from '../hooks/useFavorites';
@@ -79,6 +80,15 @@ function ComicPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
         >
+            <Helmet>
+                <title>{comic.title} - Đọc Online Tại ComicVN</title>
+                <meta name="description" content={comic.description?.slice(0, 160) || `Đọc truyện ${comic.title} online miễn phí tại ComicVN. Cập nhật nhanh nhất.`} />
+                <meta property="og:title" content={`${comic.title} - ComicVN`} />
+                <meta property="og:description" content={comic.description?.slice(0, 160) || `Đọc ${comic.title} online miễn phí`} />
+                <meta property="og:image" content={resolveImageUrl(comic.cover_url) || PLACEHOLDER_COVER} />
+                <meta property="og:type" content="book" />
+                <link rel="canonical" href={`/truyen/${comic.slug || slugify(comic.title)}`} />
+            </Helmet>
             {/* Comic Info */}
             <div className="bg-white dark:bg-dark-card p-3 sm:p-4 mb-4 shadow-sm dark:shadow-none rounded-lg">
                 <div className="flex flex-col md:flex-row gap-4 sm:gap-5">
@@ -87,6 +97,8 @@ function ComicPage() {
                         <img
                             src={resolveImageUrl(comic.cover_url) || PLACEHOLDER_COVER}
                             alt={comic.title}
+                            width={192}
+                            height={256}
                             className="w-36 sm:w-48 h-48 sm:h-64 object-cover rounded-lg"
                         />
                     </div>
@@ -144,6 +156,8 @@ function ComicPage() {
                                 <>
                                     <button
                                         onClick={() => toggleFavorite(comic)}
+                                        aria-pressed={isFavorite(comic.id)}
+                                        aria-label={isFavorite(comic.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
                                         className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${isFavorite(comic.id)
                                             ? 'bg-red-500 text-white hover:bg-red-600'
                                             : 'bg-gray-200 dark:bg-dark-tertiary text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-dark-secondary'
@@ -153,6 +167,8 @@ function ComicPage() {
                                     </button>
                                     <button
                                         onClick={() => toggleFollow(comic)}
+                                        aria-pressed={isFollowing(comic.id)}
+                                        aria-label={isFollowing(comic.id) ? 'Bỏ theo dõi' : 'Theo dõi truyện'}
                                         className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${isFollowing(comic.id)
                                             ? 'bg-blue-500 text-white hover:bg-blue-600'
                                             : 'bg-gray-200 dark:bg-dark-tertiary text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-dark-secondary'
@@ -183,6 +199,7 @@ function ComicPage() {
                     </h2>
                     <button
                         onClick={() => setSortDesc(!sortDesc)}
+                        aria-label={sortDesc ? 'Sắp xếp từ cũ đến mới' : 'Sắp xếp từ mới đến cũ'}
                         className="px-2 py-1 text-xs bg-gray-200 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-white transition-colors"
                     >
                         {sortDesc ? '↓ Mới nhất' : '↑ Cũ nhất'}

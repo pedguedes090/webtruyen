@@ -45,7 +45,7 @@ function RankingList({ comics, recentComics = [] }) {
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
-                        className={`relative px-3 py-1 text-xs font-medium rounded transition-all ${activeTab === tab.id
+                        className={`relative px-4 py-2.5 min-h-[44px] text-xs font-medium rounded transition-all ${activeTab === tab.id
                             ? 'text-white'
                             : 'bg-gray-200 dark:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-white'
                             }`}
@@ -89,6 +89,8 @@ function RankingList({ comics, recentComics = [] }) {
                                     <img
                                         src={resolveImageUrl(comic.cover_url) || PLACEHOLDER_SMALL}
                                         alt={comic.title}
+                                        width={48}
+                                        height={64}
                                         className="w-full h-full object-cover rounded"
                                     />
                                     <span className={`absolute -left-1 -bottom-1 w-5 h-5 flex items-center justify-center text-xs font-bold rounded ${index === 0 ? 'bg-yellow-500 text-yellow-900' :

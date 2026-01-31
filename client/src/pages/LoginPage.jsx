@@ -40,10 +40,13 @@ function LoginPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">Email</label>
+                            <label htmlFor="email" className="block text-sm text-gray-400 mb-1">Email</label>
                             <input
+                                id="email"
                                 type="email"
-                                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border text-gray-800 dark:text-gray-200 outline-none focus:border-primary transition-colors"
+                                name="email"
+                                autoComplete="email"
+                                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border text-gray-800 dark:text-gray-200 outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary transition-colors"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="your@email.com"
@@ -52,10 +55,13 @@ function LoginPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">Mật khẩu</label>
+                            <label htmlFor="password" className="block text-sm text-gray-400 mb-1">Mật khẩu</label>
                             <input
+                                id="password"
                                 type="password"
-                                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border text-gray-800 dark:text-gray-200 outline-none focus:border-primary transition-colors"
+                                name="password"
+                                autoComplete="current-password"
+                                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border text-gray-800 dark:text-gray-200 outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary transition-colors"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
@@ -64,15 +70,20 @@ function LoginPage() {
                         </div>
 
                         {error && (
-                            <p className="text-red-400 text-sm">{error}</p>
+                            <p className="text-red-400 text-sm" role="alert">{error}</p>
                         )}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-2.5 bg-primary text-white font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
+                            className="w-full py-2.5 bg-primary text-white font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+                            {loading ? (
+                                <>
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Đang xử lý…
+                                </>
+                            ) : 'Đăng nhập'}
                         </button>
                     </form>
 

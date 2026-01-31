@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getChapter, getChapterBySlugAndNumber, getComic, getComicBySlug, getChapters, resolveImageUrl, slugify } from '../api';
 import { useHistory } from '../hooks/useHistory';
@@ -211,6 +212,11 @@ function ReaderPage() {
 
     return (
         <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
+            <Helmet>
+                <title>{comic?.title} - Chương {chapter.chapter_number} | ComicVN</title>
+                <meta name="description" content={`Đọc ${comic?.title} Chương ${chapter.chapter_number} online miễn phí tại ComicVN`} />
+                <meta name="robots" content="noindex, follow" />
+            </Helmet>
             {/* Reading Progress Bar */}
             <div className="fixed top-0 left-0 right-0 h-0.5 z-[60] bg-gray-300 dark:bg-gray-800">
                 <div

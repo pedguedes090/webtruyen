@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useState, useEffect, createContext, Suspense, lazy } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './context/AuthContext';
 import Header from './components/Header';
 
@@ -36,25 +37,34 @@ function AppContent() {
 
     return (
         <div className="min-h-screen">
+            {/* Skip to main content for screen readers */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:outline-none"
+            >
+                Bỏ qua đến nội dung chính
+            </a>
             {!isReaderPage && <Header />}
             <Suspense fallback={<PageLoader />}>
-                <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/truyen/:slug" element={<ComicPage />} />
-                    <Route path="/truyen/:slug/chuong/:number" element={<ReaderPage />} />
-                    {/* Legacy routes - redirect to new format */}
-                    <Route path="/comic/:id" element={<ComicPage />} />
-                    <Route path="/read/:id" element={<ReaderPage />} />
-                    <Route path="/search" element={<SearchPage />} />
-                    <Route path="/history" element={<HistoryPage />} />
-                    <Route path="/adminaddct" element={<AdminPage />} />
-                    <Route path="/group/dashboard" element={<GroupDashboard />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/genres" element={<GenresPage />} />
-                    <Route path="/favorites" element={<FavoritesPage />} />
-                    <Route path="/following" element={<FollowingPage />} />
-                </Routes>
+                <main id="main-content">
+                    <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/truyen/:slug" element={<ComicPage />} />
+                        <Route path="/truyen/:slug/chuong/:number" element={<ReaderPage />} />
+                        {/* Legacy routes - redirect to new format */}
+                        <Route path="/comic/:id" element={<ComicPage />} />
+                        <Route path="/read/:id" element={<ReaderPage />} />
+                        <Route path="/search" element={<SearchPage />} />
+                        <Route path="/history" element={<HistoryPage />} />
+                        <Route path="/adminaddct" element={<AdminPage />} />
+                        <Route path="/group/dashboard" element={<GroupDashboard />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/genres" element={<GenresPage />} />
+                        <Route path="/favorites" element={<FavoritesPage />} />
+                        <Route path="/following" element={<FollowingPage />} />
+                    </Routes>
+                </main>
             </Suspense>
         </div>
     );
@@ -75,28 +85,20 @@ function App() {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
-    // Block right-click on entire website
-    useEffect(() => {
-        const handleContextMenu = (e) => {
-            e.preventDefault();
-            return false;
-        };
-        document.addEventListener('contextmenu', handleContextMenu);
-        return () => document.removeEventListener('contextmenu', handleContextMenu);
-    }, []);
-
     function toggleTheme() {
         setTheme(prev => prev === 'dark' ? 'light' : 'dark');
     }
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
-            <AuthProvider>
-                <BrowserRouter>
-                    <AppContent />
-                </BrowserRouter>
-            </AuthProvider>
-        </ThemeContext.Provider>
+        <HelmetProvider>
+            <ThemeContext.Provider value={{ theme, toggleTheme }}>
+                <AuthProvider>
+                    <BrowserRouter>
+                        <AppContent />
+                    </BrowserRouter>
+                </AuthProvider>
+            </ThemeContext.Provider>
+        </HelmetProvider>
     );
 }
 

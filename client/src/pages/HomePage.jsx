@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { ComicCard, ComicCardWithChapters } from '../components/ComicCard';
 import RankingList from '../components/RankingList';
@@ -112,6 +113,14 @@ function HomePage() {
 
     return (
         <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+            <Helmet>
+                <title>{page > 1 ? `Trang ${page} - ` : ''}ComicVN - Đọc Truyện Tranh Online Miễn Phí</title>
+                <meta name="description" content="ComicVN - Website đọc truyện tranh online miễn phí, cập nhật nhanh nhất. Hàng ngàn bộ truyện manga, manhua, manhwa chất lượng cao." />
+                <meta property="og:title" content="ComicVN - Đọc Truyện Tranh Online" />
+                <meta property="og:description" content="Website đọc truyện tranh online miễn phí, cập nhật nhanh nhất." />
+                <meta property="og:type" content="website" />
+                <link rel="canonical" href={page > 1 ? `/?page=${page}` : '/'} />
+            </Helmet>
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 sm:gap-6">
                 {/* Main Content */}
                 <div className="space-y-4 sm:space-y-6">
@@ -155,6 +164,7 @@ function HomePage() {
                                     setRecentComics(recentResponse.data);
                                 }}
                                 className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center hover:bg-primary-hover transition-colors"
+                                aria-label="Làm mới danh sách truyện"
                             >
                                 <SyncOutlined />
                             </button>
@@ -265,6 +275,8 @@ function HomePage() {
                                             <img
                                                 src={resolveImageUrl(item.coverUrl) || PLACEHOLDER_SMALL}
                                                 alt={item.comicTitle}
+                                                width={56}
+                                                height={80}
                                                 className="w-14 sm:w-16 h-20 sm:h-22 rounded object-cover hover:ring-2 hover:ring-primary transition-all"
                                             />
                                         </Link>
@@ -295,6 +307,8 @@ function HomePage() {
                                         <img
                                             src={resolveImageUrl(item.coverUrl) || PLACEHOLDER_SMALL}
                                             alt={item.comicTitle}
+                                            width={48}
+                                            height={64}
                                             className="w-12 h-16 rounded object-cover hover:ring-2 hover:ring-primary transition-all"
                                         />
                                     </Link>

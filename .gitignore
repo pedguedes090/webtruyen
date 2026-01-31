@@ -21,7 +21,8 @@ Thumbs.db
 # IDE/Editor folders
 .vscode/
 .idea/
-
+.agent/
+.agents/
 # Temporary files
 *.tmp
 *.temp

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { ComicCard } from '../components/ComicCard';
 import { getComics, getTopComics, getRecentComics, getComicsByGenre, getGenres } from '../api';
@@ -131,6 +132,11 @@ function SearchPage() {
 
     return (
         <main className="max-w-7xl mx-auto px-4 py-6">
+            <Helmet>
+                <title>{getPageTitle()} - ComicVN</title>
+                <meta name="description" content={query ? `Kết quả tìm kiếm cho "${query}" tại ComicVN` : genre ? `Truyện thể loại ${genre} tại ComicVN` : `Tìm truyện tranh tại ComicVN`} />
+                <meta name="robots" content="noindex, follow" />
+            </Helmet>
             {/* Search Header */}
             <div className="bg-white dark:bg-dark-card p-4 mb-4 shadow-sm dark:shadow-none">
                 <h1 className="text-base font-semibold text-primary mb-3 flex items-center gap-2"><SearchOutlined /> {getPageTitle()}</h1>
@@ -138,8 +144,10 @@ function SearchPage() {
                 <form onSubmit={handleSearch} className="flex gap-2 mb-4">
                     <input
                         type="text"
-                        className="flex-1 px-3 py-2 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-primary"
-                        placeholder="Nhập tên truyện hoặc tác giả..."
+                        name="search"
+                        autoComplete="off"
+                        className="flex-1 px-3 py-2 bg-gray-100 dark:bg-dark-tertiary border border-gray-200 dark:border-dark-border text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary"
+                        placeholder="Nhập tên truyện hoặc tác giả…"
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                     />

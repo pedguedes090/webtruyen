@@ -35,7 +35,7 @@ export function ComicCard({ comic, showBadge = false, index = 0, compact = false
                 <h3 className={`font-medium line-clamp-2 leading-tight text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors ${compact ? 'text-[10px]' : 'text-xs'}`}>
                     {comic.title}
                 </h3>
-                {!compact && <p className="text-[10px] text-gray-500 mt-0.5">{comic.author || 'Updating...'}</p>}
+                {!compact && <p className="text-[10px] text-gray-500 mt-0.5">{comic.author || 'Đang cập nhật…'}</p>}
             </Link>
         </CardWrapper>
     );
