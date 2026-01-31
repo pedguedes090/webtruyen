@@ -213,8 +213,8 @@ function ReaderPage() {
     return (
         <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
             <Helmet>
-                <title>{comic?.title} - Chương {chapter.chapter_number} | ComicVN</title>
-                <meta name="description" content={`Đọc ${comic?.title} Chương ${chapter.chapter_number} online miễn phí tại ComicVN`} />
+                <title>{`${comic?.title || 'Đang tải'} - Chương ${chapter.chapter_number} | ComicVN`}</title>
+                <meta name="description" content={`Đọc ${comic?.title || ''} Chương ${chapter.chapter_number} online miễn phí tại ComicVN`} />
                 <meta name="robots" content="noindex, follow" />
             </Helmet>
             {/* Reading Progress Bar */}
