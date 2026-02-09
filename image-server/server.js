@@ -11,7 +11,6 @@ import fs from 'fs';
 import fsPromises from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
-import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -60,25 +59,6 @@ app.use(compression({
     }
 }));
 
-// Rate limiting for upload endpoints
-const uploadLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 upload requests per 15 minutes
-    message: { error: 'Too many upload requests, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-
-app.use('/upload', uploadLimiter);
-
-// Rate limiting for delete/destructive endpoints
-const deleteLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    message: { error: 'Too many delete requests, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
 
 // Multer configuration for file uploads
 const storage = multer.memoryStorage();
@@ -298,7 +278,7 @@ app.use('/images', express.static(UPLOAD_DIR, {
 }));
 
 // Delete image (admin only)
-app.delete('/images/*', deleteLimiter, managementAuth, async (req, res) => {
+app.delete('/images/*', managementAuth, async (req, res) => {
     try {
         const imagePath = req.params[0];
         const fullPath = path.join(UPLOAD_DIR, imagePath);
@@ -326,7 +306,7 @@ app.delete('/images/*', deleteLimiter, managementAuth, async (req, res) => {
 });
 
 // Delete entire chapter folder (admin only)
-app.delete('/chapters/:comicSlug/:chapterNumber', deleteLimiter, managementAuth, async (req, res) => {
+app.delete('/chapters/:comicSlug/:chapterNumber', managementAuth, async (req, res) => {
     try {
         const { comicSlug, chapterNumber } = req.params;
         const chapterDir = path.join(UPLOAD_DIR, 'chapters', comicSlug, chapterNumber);
