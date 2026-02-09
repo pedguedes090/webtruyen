@@ -71,6 +71,15 @@ const uploadLimiter = rateLimit({
 
 app.use('/upload', uploadLimiter);
 
+// Rate limiting for delete/destructive endpoints
+const deleteLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    message: { error: 'Too many delete requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // Multer configuration for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -289,7 +298,7 @@ app.use('/images', express.static(UPLOAD_DIR, {
 }));
 
 // Delete image (admin only)
-app.delete('/images/*', managementAuth, async (req, res) => {
+app.delete('/images/*', deleteLimiter, managementAuth, async (req, res) => {
     try {
         const imagePath = req.params[0];
         const fullPath = path.join(UPLOAD_DIR, imagePath);
@@ -317,7 +326,7 @@ app.delete('/images/*', managementAuth, async (req, res) => {
 });
 
 // Delete entire chapter folder (admin only)
-app.delete('/chapters/:comicSlug/:chapterNumber', managementAuth, async (req, res) => {
+app.delete('/chapters/:comicSlug/:chapterNumber', deleteLimiter, managementAuth, async (req, res) => {
     try {
         const { comicSlug, chapterNumber } = req.params;
         const chapterDir = path.join(UPLOAD_DIR, 'chapters', comicSlug, chapterNumber);

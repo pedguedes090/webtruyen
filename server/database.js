@@ -738,6 +738,7 @@ export const invalidateGenreCache = () => {
 
 // Helper: Sanitize genre string to prevent injection via LIKE pattern
 function sanitizeGenre(genre) {
+  if (typeof genre !== 'string') return '';
   // Remove characters that could be used for SQL LIKE injection
   return genre.replace(/[%_"\\]/g, '');
 }
