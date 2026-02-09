@@ -10,6 +10,15 @@ const db = new Database(path.join(__dirname, 'comics.db'));
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
 
+// Performance: Enable WAL mode for better concurrent read performance
+db.pragma('journal_mode = WAL');
+
+// Performance: Set busy timeout to 5 seconds to handle concurrent writes
+db.pragma('busy_timeout = 5000');
+
+// Performance: Increase cache size to ~32MB (negative = KB)
+db.pragma('cache_size = -32000');
+
 // Migration: Convert legacy image_urls to multiple server format
 try {
   const chapters = db.prepare('SELECT id, image_urls FROM chapters').all();
@@ -209,9 +218,53 @@ if (comicsWithoutSlug.length > 0) {
   console.log(`✅ Generated slugs for ${comicsWithoutSlug.length} comics`);
 }
 
+// Migration: Create FTS5 virtual table for full-text search on comics
+try {
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS comics_fts USING fts5(
+      title, author, content='comics', content_rowid='id'
+    )
+  `);
+
+  // Populate FTS table if empty
+  const ftsCount = db.prepare('SELECT COUNT(*) as count FROM comics_fts').get().count;
+  if (ftsCount === 0) {
+    const comicCount = db.prepare('SELECT COUNT(*) as count FROM comics').get().count;
+    if (comicCount > 0) {
+      db.exec(`INSERT INTO comics_fts(rowid, title, author) SELECT id, title, author FROM comics`);
+      console.log(`✅ Populated FTS index for ${comicCount} comics`);
+    }
+  }
+} catch (e) {
+  console.error('FTS5 setup error (may not be supported):', e.message);
+}
+
+// Helper: Check if FTS5 is available
+let ftsAvailable = false;
+try {
+  db.prepare('SELECT COUNT(*) FROM comics_fts').get();
+  ftsAvailable = true;
+} catch (e) {
+  ftsAvailable = false;
+}
+
 // Comic queries
 export const getAllComics = (limit = 20, offset = 0, search = '') => {
   if (search) {
+    // Use FTS5 if available for faster search
+    if (ftsAvailable) {
+      try {
+        return db.prepare(`
+          SELECT c.* FROM comics c
+          INNER JOIN comics_fts fts ON c.id = fts.rowid
+          WHERE comics_fts MATCH ?
+          ORDER BY rank
+          LIMIT ? OFFSET ?
+        `).all(`${search}*`, limit, offset);
+      } catch (e) {
+        // Fall back to LIKE if FTS query fails (e.g., special characters)
+      }
+    }
     return db.prepare(`
       SELECT * FROM comics 
       WHERE title LIKE ? OR author LIKE ?
@@ -303,6 +356,15 @@ export const warmupCountCache = () => {
 export const getTotalComicsCount = (search = '') => {
   // Search queries are not cached (too many variations)
   if (search) {
+    if (ftsAvailable) {
+      try {
+        return db.prepare(`
+          SELECT COUNT(*) as count FROM comics_fts WHERE comics_fts MATCH ?
+        `).get(`${search}*`).count;
+      } catch (e) {
+        // Fall back to LIKE
+      }
+    }
     return db.prepare(`
       SELECT COUNT(*) as count FROM comics 
       WHERE title LIKE ? OR author LIKE ?
@@ -337,8 +399,9 @@ export const getRecentComicsCount = () => {
 
 // Count comics by genre - CACHED
 export const getComicsByGenreCount = (genre) => {
+  const safeGenre = sanitizeGenre(genre);
   const now = Date.now();
-  const cached = countCache.genres.get(genre);
+  const cached = countCache.genres.get(safeGenre);
 
   if (cached && (now - cached.time) < COUNT_CACHE_TTL) {
     return cached.value;
@@ -347,9 +410,9 @@ export const getComicsByGenreCount = (genre) => {
   const count = db.prepare(`
     SELECT COUNT(*) as count FROM comics 
     WHERE genres LIKE ?
-  `).get(`%"${genre}"%`).count;
+  `).get(`%"${safeGenre}"%`).count;
 
-  countCache.genres.set(genre, { value: count, time: now });
+  countCache.genres.set(safeGenre, { value: count, time: now });
   return count;
 };
 
@@ -434,6 +497,16 @@ export const createComic = (comic) => {
     JSON.stringify(comic.genres || []),
     comic.created_by || null
   );
+
+  // Sync FTS index
+  if (ftsAvailable) {
+    try {
+      db.prepare('INSERT INTO comics_fts(rowid, title, author) VALUES (?, ?, ?)').run(
+        result.lastInsertRowid, comic.title, comic.author || ''
+      );
+    } catch (e) { /* FTS sync error, non-critical */ }
+  }
+
   return { id: result.lastInsertRowid, slug, ...comic };
 };
 
@@ -462,10 +535,30 @@ export const updateComic = (id, comic) => {
     comic.genres ? JSON.stringify(comic.genres) : null,
     id
   );
+
+  // Sync FTS index if title or author changed
+  if (ftsAvailable && (comic.title || comic.author)) {
+    try {
+      const updated = getComicById(id);
+      if (updated) {
+        db.prepare('DELETE FROM comics_fts WHERE rowid = ?').run(id);
+        db.prepare('INSERT INTO comics_fts(rowid, title, author) VALUES (?, ?, ?)').run(
+          id, updated.title, updated.author || ''
+        );
+      }
+    } catch (e) { /* FTS sync error, non-critical */ }
+  }
+
   return getComicById(id);
 };
 
 export const deleteComic = (id) => {
+  // Sync FTS index
+  if (ftsAvailable) {
+    try {
+      db.prepare('DELETE FROM comics_fts WHERE rowid = ?').run(id);
+    } catch (e) { /* FTS sync error, non-critical */ }
+  }
   return db.prepare('DELETE FROM comics WHERE id = ?').run(id);
 };
 
@@ -643,28 +736,40 @@ export const invalidateGenreCache = () => {
   genreCacheTime = 0;
 };
 
+// Helper: Sanitize genre string to prevent injection via LIKE pattern
+function sanitizeGenre(genre) {
+  // Remove characters that could be used for SQL LIKE injection
+  return genre.replace(/[%_"\\]/g, '');
+}
+
 // Get comics by genre
 export const getComicsByGenre = (genre, limit = 20, offset = 0) => {
+  const safeGenre = sanitizeGenre(genre);
   return db.prepare(`
     SELECT * FROM comics 
     WHERE genres LIKE ? 
     ORDER BY updated_at DESC 
     LIMIT ? OFFSET ?
-  `).all(`%"${genre}"%`, limit, offset);
+  `).all(`%"${safeGenre}"%`, limit, offset);
 };
 
 // ============== USER HISTORY ==============
 
 // Get user reading history with comic details
-export const getUserHistory = (userId, limit = 50) => {
+export const getUserHistory = (userId, limit = 50, offset = 0) => {
   return db.prepare(`
     SELECT uh.*, c.title, c.slug, c.cover_url, c.author
     FROM user_history uh
     JOIN comics c ON uh.comic_id = c.id
     WHERE uh.user_id = ?
     ORDER BY uh.read_at DESC
-    LIMIT ?
-  `).all(userId, limit);
+    LIMIT ? OFFSET ?
+  `).all(userId, limit, offset);
+};
+
+// Get total count of user reading history
+export const getUserHistoryCount = (userId) => {
+  return db.prepare('SELECT COUNT(*) as count FROM user_history WHERE user_id = ?').get(userId).count;
 };
 
 // Add or update reading history

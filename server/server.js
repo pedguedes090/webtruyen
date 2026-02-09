@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,7 +9,7 @@ import jwt from 'jsonwebtoken';
 import helmet from 'helmet';
 import fs from 'fs'; // Added for debugging
 import * as db from './database.js';
-import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount, warmupCountCache, invalidateCountCache, getComicsByOwner, getComicsByOwnerCount, getUserHistory, addToHistory, removeFromHistory, clearHistory, getUserFollows, followComic, unfollowComic, isFollowingComic, syncUserData } from './database.js';
+import { invalidateGenreCache, getTotalComicsCount, getRecentComicsCount, getComicsByGenreCount, warmupCountCache, invalidateCountCache, getComicsByOwner, getComicsByOwnerCount, getUserHistory, getUserHistoryCount, addToHistory, removeFromHistory, clearHistory, getUserFollows, followComic, unfollowComic, isFollowingComic, syncUserData } from './database.js';
 import rateLimit from 'express-rate-limit';
 import { blockBots, validateApiParams, sanitizeHuggingFaceUrl } from './middleware/security.js';
 
@@ -117,6 +118,16 @@ app.use(cors({
     origin: true, // Allow all origins
     credentials: true
 }));
+
+// Enable response compression (gzip/deflate) for JSON and text responses
+app.use(compression({
+    threshold: 1024, // Only compress responses larger than 1KB
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) return false;
+        return compression.filter(req, res);
+    }
+}));
+
 app.use(express.json());
 
 // View tracking helper - only increment once per comic per hour per IP
@@ -141,6 +152,16 @@ function shouldIncrementView(ip, comicId) {
     }
     return false;
 }
+
+// Health check endpoint (before security middleware so monitoring tools can reach it)
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 // Apply Global Security Middleware
 app.use(blockBots);
 app.use('/api/', validateApiParams);
@@ -571,11 +592,12 @@ app.post('/api/huggingface/fetch-images', async (req, res) => {
 // Get user's reading history
 app.get('/api/user/history', userAuth, (req, res) => {
     try {
-        const { limit = 50 } = req.query;
-        const history = getUserHistory(req.user.id, parseInt(limit));
+        const { limit = 50, offset = 0 } = req.query;
+        const history = getUserHistory(req.user.id, parseInt(limit), parseInt(offset));
+        const total = getUserHistoryCount(req.user.id);
         res.json({
             data: history,
-            total: history.length
+            total
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -913,7 +935,7 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🚀 Comic server running at http://localhost:${PORT}`);
     if (ADMIN_USERNAME === 'admin' && ADMIN_PASSWORD === 'admin123') {
         console.warn('⚠️  WARNING: Using default admin credentials. Please update .env file!');
@@ -921,3 +943,20 @@ app.listen(PORT, () => {
     // Warm up cache on server start
     warmupCountCache();
 });
+
+// Graceful shutdown handling
+function gracefulShutdown(signal) {
+    console.log(`\n📴 ${signal} received. Shutting down gracefully...`);
+    server.close(() => {
+        console.log('✅ HTTP server closed');
+        process.exit(0);
+    });
+    // Force close after 10s
+    setTimeout(() => {
+        console.error('⚠️  Forced shutdown after timeout');
+        process.exit(1);
+    }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
