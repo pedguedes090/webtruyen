@@ -1,12 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import multer from 'multer';
 import sharp from 'sharp';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -47,6 +49,16 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Enable response compression
+app.use(compression({
+    threshold: 1024,
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) return false;
+        return compression.filter(req, res);
+    }
+}));
+
 
 // Multer configuration for file uploads
 const storage = multer.memoryStorage();
@@ -266,7 +278,7 @@ app.use('/images', express.static(UPLOAD_DIR, {
 }));
 
 // Delete image (admin only)
-app.delete('/images/*', managementAuth, (req, res) => {
+app.delete('/images/*', managementAuth, async (req, res) => {
     try {
         const imagePath = req.params[0];
         const fullPath = path.join(UPLOAD_DIR, imagePath);
@@ -279,11 +291,13 @@ app.delete('/images/*', managementAuth, (req, res) => {
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        if (!fs.existsSync(fullPath)) {
+        try {
+            await fsPromises.access(fullPath);
+        } catch {
             return res.status(404).json({ error: 'Image not found' });
         }
 
-        fs.unlinkSync(fullPath);
+        await fsPromises.unlink(fullPath);
         res.json({ success: true, message: 'Image deleted' });
     } catch (error) {
         console.error('Delete error:', error);
@@ -292,16 +306,26 @@ app.delete('/images/*', managementAuth, (req, res) => {
 });
 
 // Delete entire chapter folder (admin only)
-app.delete('/chapters/:comicSlug/:chapterNumber', managementAuth, (req, res) => {
+app.delete('/chapters/:comicSlug/:chapterNumber', managementAuth, async (req, res) => {
     try {
         const { comicSlug, chapterNumber } = req.params;
         const chapterDir = path.join(UPLOAD_DIR, 'chapters', comicSlug, chapterNumber);
 
-        if (!fs.existsSync(chapterDir)) {
+        // Security: Ensure path is within UPLOAD_DIR
+        const resolvedPath = path.resolve(chapterDir);
+        const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+
+        if (!resolvedPath.startsWith(resolvedUploadDir)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        try {
+            await fsPromises.access(chapterDir);
+        } catch {
             return res.status(404).json({ error: 'Chapter folder not found' });
         }
 
-        fs.rmSync(chapterDir, { recursive: true, force: true });
+        await fsPromises.rm(chapterDir, { recursive: true, force: true });
         res.json({ success: true, message: 'Chapter images deleted' });
     } catch (error) {
         console.error('Delete chapter error:', error);
@@ -647,9 +671,25 @@ app.use((error, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🖼️  Image Server running on port ${PORT}`);
     console.log(`📁 Upload directory: ${path.resolve(UPLOAD_DIR)}`);
     console.log(`📐 Max width: ${MAX_WIDTH}px`);
     console.log(`🔄 WebP conversion: ${CONVERT_TO_WEBP ? 'Enabled' : 'Disabled'}`);
 });
+
+// Graceful shutdown handling
+function gracefulShutdown(signal) {
+    console.log(`\n📴 ${signal} received. Shutting down gracefully...`);
+    server.close(() => {
+        console.log('✅ HTTP server closed');
+        process.exit(0);
+    });
+    setTimeout(() => {
+        console.error('⚠️  Forced shutdown after timeout');
+        process.exit(1);
+    }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
